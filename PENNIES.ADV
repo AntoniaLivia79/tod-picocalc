@@ -1,0 +1,21 @@
+# PENNIES AND PRIZES - a gentle Tunnels of Doom module for children
+# No monsters, no weapons: explore and find all eight prizes.
+TITLE,Pennies and Prizes
+INTRO,Explore the tunnels and find the eight hidden prizes. Pick up pennies along the way!
+WIN,You found every prize. Well done!
+FAIL,Try again another day.
+FLOORS,2
+GRID,10,8
+ROOMS,12
+GOLD,0,0,0
+WANDER,0
+NEEDMAP,0
+STORE,0,0
+QUEST,a puppy,1,0
+QUEST,a snail,1,0
+QUEST,a parakeet,1,0
+QUEST,a fish bowl,1,0
+QUEST,a picture,2,0
+QUEST,a top,2,0
+QUEST,stardust,2,0
+QUEST,magic glass,2,0

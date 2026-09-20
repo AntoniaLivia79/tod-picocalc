@@ -1,0 +1,113 @@
+# ================================================================
+# QUEST OF THE KING - Tunnels of Doom adventure module
+# Lines are KEYWORD,field,field,...   Lines starting # are ignored.
+# ================================================================
+TITLE,Quest of the King
+INTRO,The King is held captive by monsters in the dungeon beneath a ruined castle.
+INTRO,Rescue him and recover his rainbow orb of power before they are destroyed. Then return to the surface.
+INTRO,Beware - your time is limited!
+WIN,The King is safe and his rainbow orb restored. The kingdom rejoices!
+FAIL,The kingdom falls into darkness.
+
+# FLOORS,n (1-10)   GRID,width,height (max 14x10)   ROOMS,per generated floor
+FLOORS,4
+GRID,14,10
+ROOMS,16
+# starting GOLD per player for difficulty 1,2,3
+GOLD,160,130,100
+# % chance per hallway step of a wandering monster
+WANDER,6
+# 1 = a floor's map must be found before descending
+NEEDMAP,1
+# floors that get a general store room
+STORE,3,8
+# SEED,0 = new random dungeon each game, other = same dungeon every game
+SEED,0
+
+# ITEM,kind,name,v1,v2,cost,classes,unknown-name
+# kinds: W hand weapon (v1=damage)   R ranged weapon (v1=damage, v2=ammo group)
+#        X ammunition (v1=count, v2=ammo group)   A armor / S shield (v1=protection)
+#        P rations (v1=count)   H healing (v1=wounds healed over time)
+#        M magic (v1=effect, v2=power): 1 heal 2 cursed/harm 3 fireball-all
+#          4 bolt-one 5 reveal map 6 +max HP 7 +bonus
+# cost 0 = not sold in the store.  classes: letters F W R H who may use it
+ITEM,W,Dagger,4,0,6,FWRH
+ITEM,W,Hand Axe,6,0,15,FRH
+ITEM,W,Mace,7,0,25,FRH
+ITEM,W,Sword,8,0,40,FRH
+ITEM,W,Two-Hand Sword,11,0,0,FH
+ITEM,R,Sling,4,1,10,FWRH
+ITEM,R,Short Bow,6,2,30,FRH
+ITEM,R,Crossbow,9,3,50,FRH
+ITEM,X,Stones,20,1,2,FWRH
+ITEM,X,Arrows,20,2,20,FRH
+ITEM,X,Quarrels,10,3,20,FRH
+ITEM,A,Leather Armor,1,0,15,FRH
+ITEM,A,Chain Mail,3,0,60,FH
+ITEM,A,Plate Armor,5,0,0,FH
+ITEM,S,Shield,1,0,20,FH
+ITEM,P,Rations,10,0,20
+ITEM,H,Healing,15,0,30
+ITEM,M,Medicinal Ale,1,6,0,FWRH,Ale
+ITEM,M,Healing Potion,1,12,0,FWRH,Potion
+ITEM,M,Poison Ale,2,5,0,FWRH,Ale
+ITEM,M,Cursed Potion,2,8,0,FWRH,Potion
+ITEM,M,Fireball Scroll,3,8,0,WH,Scroll
+ITEM,M,Lightning Scroll,4,14,0,WH,Scroll
+ITEM,M,Wand of Frost,3,6,0,FWRH,Wand
+ITEM,M,Seeing Scroll,5,1,0,WH,Scroll
+ITEM,M,Giant Strength,6,4,0,FWRH,Potion
+ITEM,M,Lucky Charm,7,1,0,FWRH,Charm
+
+# KIT,classes,item  - free starting equipment
+KIT,F,Sword
+KIT,F,Shield
+KIT,FR,Leather Armor
+KIT,R,Hand Axe
+KIT,R,Short Bow
+KIT,R,Arrows
+KIT,R,Arrows
+KIT,W,Dagger
+KIT,W,Sling
+KIT,W,Stones
+KIT,W,Fireball Scroll
+KIT,H,Sword
+KIT,H,Fireball Scroll
+
+# MON,name,glyph,colour,hp,attack,defense,damage,speed,xp,minfloor,maxfloor,maxcount,ranged,negotiate%,sound
+MON,Giant Rat,r,&H906030,3,1,0,3,2,3,1,2,5,0,10,squeaking
+MON,Ooze,o,&H40D040,6,1,0,4,1,5,1,2,3,0,5,a wet slither
+MON,Goblin,g,&H80A000,6,2,1,5,1,6,1,3,4,0,40,harsh laughter
+MON,Evil Manes,m,&HD0D0D0,5,2,1,4,2,7,1,3,4,0,20,wailing
+MON,Gremlin,G,&H00C0A0,8,3,2,5,2,10,2,4,3,0,30,giggling
+MON,Skeleton,S,&HF0F0F0,9,3,2,6,1,12,2,4,4,0,0,rattling bones
+MON,Kobold Archer,k,&HC08040,6,3,1,4,1,10,2,4,4,1,30,twanging bows
+MON,Orc,O,&H608030,12,4,3,7,1,15,3,6,3,0,35,grunting
+MON,Metalloid,M,&HA0A0C0,14,4,5,7,1,20,3,6,3,0,10,clanking
+MON,Wraith,W,&H6060FF,15,5,4,8,2,28,4,8,2,1,0,a cold moan
+MON,Troll,T,&H409040,24,5,4,10,1,35,4,9,2,0,20,heavy footsteps
+MON,Dragon,D,&HE02020,40,7,6,14,2,80,5,10,1,1,15,a deep rumbling roar
+
+# QUEST,name,floor,countdown  (countdown ticks every 10 steps; 0 = no time limit)
+QUEST,The King,3,90
+QUEST,Rainbow Orb,4,140
+
+# Optional hand-made floors. Cells sit at EVEN columns of EVEN rows:
+#   + corridor  R room  U stairs up  D stairs down  S store
+#   C chest room  V vault room  F fountain room  T living statue room
+#   - joins cells left/right,  | (odd rows, under a cell) joins up/down
+# Floors not given here are generated at random.
+FLOOR,1
+MAP,U-+-+-+-R   R-+-+-C
+MAP,  |     |   |     |
+MAP,  +     +-+-+     +
+MAP,  |     |         |
+MAP,  R-+-+-+   F-+-+-+-+-R
+MAP,    |       |       |
+MAP,    +       +       V
+MAP,    |       |
+MAP,T-+-+-+-+-+-+-+-R
+MAP,          |     |
+MAP,          +     +-+-D
+MAP,          |     |
+MAP,          R     R

@@ -1,0 +1,108 @@
+========================================
+      TUNNELS OF DOOM - PLAYER GUIDE
+========================================
+
+GETTING STARTED
+---------------
+1. RUN "PARTY.BAS" to make a party of
+   1-4 adventurers. R re-rolls stats,
+   ENTER saves PARTY.DAT.
+2. RUN "TOD.BAS". On the title screen:
+   N = new quest, C = continue saved,
+   Q = quit.
+3. Pick an adventure (.ADV file) and a
+   difficulty: 1 easy to 3 hard.
+4. Buy gear in the store, then press
+   ESC to enter the dungeon.
+
+CLASSES
+-------
+Fighter  All weapons and armor.
+Wizard   Few weapons, no armor, but
+         can read magic scrolls.
+Rogue    All weapons, light armor,
+         good at avoiding traps.
+Hero     Can do it all, but only in
+         a one-player party.
+
+GOAL
+----
+Find every quest object, then climb
+the up-stairs on floor 1 to win.
+Some objects have a time limit!
+
+EXPLORING
+---------
+Rooms:    arrows move out an exit.
+Hallways: UP walks forward,
+          LEFT/RIGHT turn,
+          DOWN turns around.
+
+>  or .   go down stairs
+<  or ,   go up stairs
+M         floor map
+1         player report
+2         party report
+U         use magic item
+T         trade or drop magic item
+O         change who leads
+L         listen at a door
+K         save game
+Q         abandon quest
+?  or H   command help
+
+You may need a floor's map before you
+can go down. Maps hide in rooms.
+
+COMBAT
+------
+Each player may take one step, then
+attack. The highlighted name shows
+whose turn it is.
+
+Arrow     step, or hit adjacent foe
+F         fire ranged weapon; aim
+          with arrows, SPACE fires
+W         switch weapon
+N         negotiate: Y pay,
+          N haggle, R refuse
+U         use magic item
+ENTER     end this player's turn
+
+HP = hit points, WD = wounds taken.
+When WD reaches HP the player falls.
+++ + 0 - -- shows your odds in a
+fight: ++ is best, -- is worst.
+
+ROOMS
+-----
+Chest     May be trapped.
+Vault     Guess 3 digits. You are
+          told how many are right
+          and HIGHER or LOWER.
+Fountain  One drink each. Good or
+          bad luck!
+Statue    Pay gold to identify a
+          magic item. Pay too
+          little and it may break.
+Store     Buy more supplies.
+
+STAYING ALIVE
+-------------
+- Every 10 steps the party eats one
+  ration and heals one wound each.
+  No rations means no healing.
+- Healing packs heal one wound per
+  step until used up.
+- Unknown magic may be cursed. Try
+  it when you are safe.
+- Negotiating can save a weak party.
+
+SAVING
+------
+Press K to save to TODSAVE.DAT.
+There is one save slot. Choose C on
+the title screen to continue. Keep
+the .ADV file on the card.
+
+Good luck, adventurers!
