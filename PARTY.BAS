@@ -65,7 +65,7 @@ END
 
 SUB MakePlayer n
   LOCAL k, mx, c
-  Header "PLAYER"+STR$(n)+" OF"+STR$(np)
+  Header "PLAYER "+STR$(n)+" OF "+STR$(np)
   RL "Name?",CYN
   pn$(n)=LineIn$(8,ry,10)
   ry=ry+20
@@ -112,7 +112,7 @@ SUB ShowParty
     y=ry
     DrawFig 10,y,co(pco(n))
     TEXT 44,y,STR$(n)+". "+pn$(n),"LT",1,1,co(pco(n)),0
-    TEXT 44,y+13,cln$(pcl(n))+"  HP"+STR$(php(n))+"  Bonus"+STR$(pbn(n)),"LT",1,1,WHT,0
+    TEXT 44,y+13,cln$(pcl(n))+"  HP "+STR$(php(n))+"  Bonus "+STR$(pbn(n)),"LT",1,1,WHT,0
     ry=ry+36
   NEXT
   ry=ry+10

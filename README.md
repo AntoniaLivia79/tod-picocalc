@@ -82,7 +82,7 @@ There are two views.
 
 ![Room view](screens/3_room_view.png)
 
-**Hallway view** (first person). **UP** walks forward, **LEFT/RIGHT** turn, **DOWN** turns around. The top bar shows which way you are facing.
+**Hallway view** (first person). Openings in the walls lead to more hallway; wooden doors, on the side walls or straight ahead, lead into rooms. **UP** walks forward, **LEFT/RIGHT** turn, **DOWN** turns around. The top bar shows which way you are facing.
 
 ![Hallway view](screens/4_hallway_view.png)
 
@@ -309,12 +309,11 @@ Hand-drawn floors keep exactly the features you draw. Monsters, gold, items, the
 The editor is deliberately simple. Possible future features, roughly in order of usefulness:
 
 1. **Graphical map editor** — move a cursor over the grid and place rooms, stairs and links, instead of typing map rows.
-2. **Randomisers** — generate a monster, item, quest name or a whole floor map at random, with stats scaled to the floor.
-3. **Pick lists** — choose item kinds, classes and colours from menus rather than typing codes, with a colour preview for monsters.
-4. **Balance report** — per floor: monsters available, average monster strength, gold and items on offer.
-5. **Play-test button** — save and run `TOD.BAS` on the module directly.
-6. **Search and bulk edit** — find a name across the file, or scale all monster hit points by a percentage.
-7. **Undo** for the last change, and automatic backup (`.BAK`) on save.
+2. **Pick lists** — choose item kinds, classes and colours from menus rather than typing codes, with a colour preview for monsters.
+3. **Balance report** — per floor: monsters available, average monster strength, gold and items on offer.
+4. **Play-test** — save and run `TOD.BAS` on the module directly.
+5. **Search and bulk edit** — find a name across the file, or scale all monster hit points by a percentage.
+6. **Automatic backup** — back up original adv (`.BAK`) on save.
 
 ## 4. Developer's guide
 
@@ -342,7 +341,7 @@ The source is split into commented sections, in this order:
 | Module & party loading | `LoadModule`, `LoadParty`, `ApplyKits`, `FindItem` |
 | Dungeon generation | `BuildDungeon` → per floor `GenFloor` (or `ParseMap` for drawn floors), `Carve`, `Link`, `Populate`, `PlaceSpecial`; `PickMon`, `MonCount`, `PickItem` |
 | Items & party | `GiveItem`, `PickMI`, `UseMagic`, `IName$`, `Info$`, `Alive`, `PartyAlive`, `AllFound`, `Wound`, `Prot`, `AskP`, `GainXP`, `SwapP` |
-| Drawing | `DrawFig`, `DrawMon`, `DrawHall` (perspective corridor), `DrawArena`, `Panel`, `DrawRoomScr`, `Redraw`, `ShowMapScr` |
+| Drawing | `DrawFig`, `DrawMon`, `DrawHall` (perspective corridor, with `ExitKind`, `SideDoor` and `FrontDoor` for doors into rooms), `DrawArena`, `Panel`, `DrawRoomScr`, `Redraw`, `ShowMapScr` |
 | Reports | `PlayerRpt`, `PartyRpt`, `MonRpt`, `HelpScr`, `Ind$`, `WName$`, `Store` |
 | Exploration | `PlayGame` (key loop), `Walk`, `MoveTo`, `TakeStep`, `TimeStep`, `Stairs`, `Listen`, `Trade`, `Formation` |
 | Rooms | `RoomEvents`, `Treasure`, `Reveal`, `Vault`, `Fountain`, `Statue` |

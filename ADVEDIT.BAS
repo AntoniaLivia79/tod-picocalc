@@ -248,7 +248,7 @@ FUNCTION EdInput$(p$,init$,mx)
   s$=LEFT$(init$,mx): cp=LEN(s$)+1: edcan=0
   EdRow 21,p$,YEL,BLK
   EdRow 22,"",WHT,BLK
-  EdHelp "ENTER accept  ESC cancel  arrows move","BS/DEL erase  HOME/END  max"+STR$(mx)
+  EdHelp "ENTER accept  ESC cancel  arrows move","BS/DEL erase  HOME/END  max "+STR$(mx)
   DO
     IF cp<ofs+1 THEN ofs=cp-1
     IF cp>ofs+39 THEN ofs=cp-39

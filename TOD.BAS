@@ -486,9 +486,9 @@ FUNCTION IName$(it)
 END FUNCTION
 FUNCTION Info$(it)
   SELECT CASE itk$(it)
-    CASE "W","R": Info$="Dmg"+STR$(iv1(it))
-    CASE "A","S": Info$="Pro"+STR$(iv1(it))
-    CASE "X","P","H": Info$="x"+STR$(iv1(it))
+    CASE "W","R": Info$="Dmg "+STR$(iv1(it))
+    CASE "A","S": Info$="Pro "+STR$(iv1(it))
+    CASE "X","P","H": Info$="x "+STR$(iv1(it))
     CASE ELSE: Info$="Magic"
   END SELECT
 END FUNCTION
@@ -672,6 +672,42 @@ SUB DrawMon c,r,mt
   TxL x+8,y+7,mgl$(mt),0,mcol(mt)
 END SUB
 
+' What lies through side d of cell x,y: 0 wall, 1 hallway, 2 room.
+' The neighbour is only read when an exit exists, so the grid edge
+' is never looked past.
+FUNCTION ExitKind(x,y,d)
+  IF ((CG(x,y,BMK,4)>>d) AND 1)=0 THEN EXIT FUNCTION
+  IF CG(x+DX(d),y+DY(d),BTY,2)=2 THEN ExitKind=2 ELSE ExitKind=1
+END FUNCTION
+' Door on a side wall segment running from the near edge (x0,t0..b0)
+' to the far edge (x1,t1..b1). It fills the middle half of the
+' segment and 70% of the wall height, so it shrinks with distance.
+SUB SideDoor x0,t0,b0,x1,t1,b1
+  LOCAL xa, ta, ba, xb, tb, bb, da, db, ma, mb, kr
+  xa=x0+(x1-x0)\4: ta=t0+(t1-t0)\4: ba=b0+(b1-b0)\4
+  xb=x0+(x1-x0)*3\4: tb=t0+(t1-t0)*3\4: bb=b0+(b1-b0)*3\4
+  da=ba-(ba-ta)*7\10: db=bb-(bb-tb)*7\10
+  Tr xa,da,xb,db,xb,bb,&H8B4513: Tr xa,da,xb,bb,xa,ba,&H8B4513
+  Ln xa,da,xb,db,&H402010: Ln xb,db,xb,bb,&H402010
+  Ln xa,da,xa,ba,&H402010: Ln xa,ba,xb,bb,&H402010
+  ma=(da+ba)\2: mb=(db+bb)\2
+  Ln xa,ma,xb,mb,&HA0602A
+  kr=MAX(1,ABS(xb-xa)\10)
+  Ci xa+(xb-xa)*3\4,(ma+mb)\2+(ba-da)\12,kr,YEL,YEL
+END SUB
+' Door facing the party on the end wall between L..R, T..B
+SUB FrontDoor L,T,R,B
+  LOCAL dw, dh, x0, y0
+  dw=MAX(6,(R-L)*2\5): dh=MAX(8,(B-T)*3\4)
+  x0=(L+R)\2-dw\2: y0=B-dh
+  Bx x0-1,y0-1,dw+2,dh+1,&H402010,&H402010
+  Bx x0,y0,dw,dh,&H602010,&H8B4513
+  IF dw>=14 THEN
+    Bx x0+dw\5,y0+dh\10,dw*3\5,dh*7\20,&HA0602A,-1
+    Bx x0+dw\5,y0+dh\2,dw*3\5,dh*7\20,&HA0602A,-1
+  ENDIF
+  Ci x0+dw*4\5,y0+dh*11\20,MAX(1,dw\16),YEL,YEL
+END SUB
 SUB DrawHall
   LOCAL k, x, y, nx, ny, d, l, r, m, L0, R0, T0, B0, L1, R1, T1, B1, dw, dh
   Clr GRN
@@ -682,31 +718,33 @@ SUB DrawHall
     L0=10+ins(k): R0=309-ins(k): T0=22+ins(k)*11\15: B0=241-ins(k)*11\15
     L1=10+ins(k+1): R1=309-ins(k+1): T1=22+ins(k+1)*11\15: B1=241-ins(k+1)*11\15
     m=CG(x,y,BMK,4)
-    IF (m>>l) AND 1 THEN
+    ' side walls: an exit into a hallway is an opening, an exit into
+    ' a room is a door set in the wall, drawn in perspective
+    IF ExitKind(x,y,l)=1 THEN
       Bx L0,T1,L1-L0+1,B1-T1+1,&HB09060,&HD0B070
     ELSE
       Tr L0,T0,L1,T1,L1,B1,&HE8C888: Tr L0,T0,L1,B1,L0,B0,&HE8C888
       Ln L0,T0,L1,T1,&HA08050: Ln L0,B0,L1,B1,&HA08050
+      IF ExitKind(x,y,l)=2 THEN SideDoor L0,T0,B0,L1,T1,B1
     ENDIF
-    IF (m>>r) AND 1 THEN
+    IF ExitKind(x,y,r)=1 THEN
       Bx R1,T1,R0-R1+1,B1-T1+1,&HB09060,&HD0B070
     ELSE
       Tr R0,T0,R1,T1,R1,B1,&HE8C888: Tr R0,T0,R1,B1,R0,B0,&HE8C888
       Ln R0,T0,R1,T1,&HA08050: Ln R0,B0,R1,B1,&HA08050
+      IF ExitKind(x,y,r)=2 THEN SideDoor R0,T0,B0,R1,T1,B1
     ENDIF
     IF ((m>>d) AND 1)=0 THEN Bx L1,T1,R1-L1+1,B1-T1+1,&HA06050,&HFF8070: EXIT FOR
     nx=x+DX(d): ny=y+DY(d)
     IF CG(nx,ny,BTY,2)=2 THEN
       Bx L1,T1,R1-L1+1,B1-T1+1,&HA06050,&HFF8070
-      dw=MAX(4,(R1-L1)\4): dh=(B1-T1)*2\3
-      Bx (L1+R1)\2-dw\2,B1-dh,dw,dh,&H602010,&HC04030
-      Ln (L1+R1)\2,B1-dh,(L1+R1)\2,B1,WHT
+      FrontDoor L1,T1,R1,B1
       EXIT FOR
     ENDIF
     x=nx: y=ny
     IF k=4 THEN Bx L1,T1,R1-L1+1,B1-T1+1,0,0
   NEXT
-  TopBar "FLOOR"+STR$(fl)+"  FACING "+MID$("NORTHEAST SOUTHWEST",pd*5+1,5)+"  GOLD"+STR$(gold),0,GRN
+  TopBar "FLOOR "+STR$(fl)+"  FACING "+MID$("NORTHEAST SOUTHWEST",pd*5+1,5)+"  GOLD "+STR$(gold),0,GRN
   DrawLog
 END SUB
 
@@ -751,8 +789,8 @@ SUB Panel cur,cmb
     y=OY+(i-1)*55: c=co(pco(i))
     IF cur=i THEN TxL PANX,y,STR$(i)+" "+LEFT$(pn$(i),8),0,c ELSE TxL PANX,y,STR$(i)+" "+LEFT$(pn$(i),8),c,0
     IF Alive(i) THEN DrawFig PANX,y+12,c ELSE TxL PANX+4,y+20,"--",GRY,0
-    TxL PANX+26,y+14,"HP"+STR$(php(i)),WHT,0
-    TxL PANX+26,y+26,"WD"+STR$(pwd(i)),WHT,0
+    TxL PANX+26,y+14,"HP "+STR$(php(i)),WHT,0
+    TxL PANX+26,y+26,"WD "+STR$(pwd(i)),WHT,0
     IF cmb AND Alive(i) THEN TxL PANX+26,y+38,Ind$(i),YEL,0
   NEXT
 END SUB
@@ -769,7 +807,7 @@ SUB DrawRoomScr
     IF Alive(i) THEN DrawFig OX+cpx(i)*TS,OY+cpy(i)*TS,co(pco(i))
   NEXT
   Panel 0,0
-  TopBar "FLOOR"+STR$(fl)+"  ROOM  GOLD"+STR$(gold),WHT,&H303030
+  TopBar "FLOOR "+STR$(fl)+"  ROOM  GOLD "+STR$(gold),WHT,&H303030
   DrawLog
 END SUB
 
@@ -802,7 +840,7 @@ SUB ShowMapScr
     ENDIF
   NEXT: NEXT
   Bo x0+px*csz+h-7,y0+py*csz+h-7,16,16,&HFF0000
-  TxA 160,250,"FLOOR:"+STR$(fl),"CT",1,0,GRN
+  TxA 160,250,"FLOOR: "+STR$(fl),"CT",1,0,GRN
   IF mapf(fl)=0 THEN TxA 160,266,"(map of this floor not found)","CT",1,0,GRN
   TxA 160,296,"PRESS ANY KEY WHEN FINISHED","CT",1,0,GRN
   m=GetK()
@@ -844,7 +882,7 @@ SUB PlayerRpt
     RL "Bonus "+STR$(pbn(i))+"   Protection "+STR$(Prot(i)),WHT
     FOR j=0 TO 1
       IF pcw(i)=j THEN n=YEL ELSE n=WHT
-      RL "Weapon"+STR$(j+1)+": "+WName$(i,j)+"  Dmg"+STR$(WDmg(i,j,0)),n
+      RL "Weapon "+STR$(j+1)+": "+WName$(i,j)+"  Dmg "+STR$(WDmg(i,j,0)),n
     NEXT
     IF par(i) THEN RL "Armor: "+itn$(par(i)),WHT ELSE RL "Armor: none",WHT
     IF psh(i) THEN RL "Shield: "+itn$(psh(i)),WHT ELSE RL "Shield: none",WHT
@@ -937,7 +975,7 @@ SUB Store
   NEXT
   IF n=0 THEN Msg "There is no store here.": EXIT SUB
   DO
-    Clr 0: TopBar "GENERAL STORE        GOLD"+STR$(gold),0,YEL
+    Clr 0: TopBar "GENERAL STORE        GOLD "+STR$(gold),0,YEL
     FOR i=1 TO n
       it=sidx(i)
       TxL 4,10+i*12,CHR$(64+i)+" "+LEFT$(itn$(it)+SPACE$(20),20)+LEFT$(Info$(it)+SPACE$(7),7)+RIGHT$("    "+STR$(icost(it)),5),WHT,0
@@ -1072,7 +1110,7 @@ SUB Stairs d
   ENDIF
   inrm=1: ent=2: CS px,py,BSE,1,1
   IF d>0 THEN Sfx "stdown" ELSE Sfx "stup"
-  Msg "You are now on floor"+STR$(fl)+"."
+  Msg "You are now on floor "+STR$(fl)+"."
 END SUB
 
 SUB Listen
@@ -1154,14 +1192,14 @@ END SUB
 SUB Reveal
   LOCAL g, it, q, p
   g=CG(px,py,BGD,10)*10
-  IF g>0 THEN gold=gold+g: CS px,py,BGD,10,0: Msg "Found"+STR$(g)+" gold pieces!": Sfx "gold"
+  IF g>0 THEN gold=gold+g: CS px,py,BGD,10,0: Msg "Found "+STR$(g)+" gold pieces!": Sfx "gold"
   q=CG(px,py,BQS,4)
   IF q>0 THEN
     IF qs(q)=0 THEN qs(q)=1
     CS px,py,BQS,4,0: Msg "You have found "+qn$(q)+"!": Sfx "quest": PAUSE 400
     IF AllFound() THEN Msg "Quest complete! Return to the surface."
   ENDIF
-  IF CG(px,py,BMP,1) THEN mapf(fl)=1: CS px,py,BMP,1,0: Msg "You found the map of floor"+STR$(fl)+"!": Sfx "map"
+  IF CG(px,py,BMP,1) THEN mapf(fl)=1: CS px,py,BMP,1,0: Msg "You found the map of floor "+STR$(fl)+"!": Sfx "map"
   it=CG(px,py,BIM,8)
   IF it>0 THEN
     Msg "Found "+IName$(it)+"!": Sfx "item"
@@ -1182,8 +1220,8 @@ FUNCTION Vault()
     IF p=0 THEN Msg "The combination scrambles.": EXIT FUNCTION
     Clr 0: TopBar "VAULT",0,YEL
     ry=24
-    RL "Combination: 3 digits, each 1 to"+STR$(hi),WHT
-    RL pn$(p)+"   HP"+STR$(php(p))+"  WD"+STR$(pwd(p)),co(pco(p))
+    RL "Combination: 3 digits, each 1 to "+STR$(hi),WHT
+    RL pn$(p)+"   HP "+STR$(php(p))+"  WD "+STR$(pwd(p)),co(pco(p))
     ry=ry+6
     FOR i=1 TO nh: RL "  "+vh$(i),WHT: NEXT
     DrawLog
@@ -1226,7 +1264,7 @@ SUB Fountain
       used(p)=1
       SELECT CASE INT(RND*6)
         CASE 0: pwd(p)=0: Msg pn$(p)+" is fully healed!": Sfx "good"
-        CASE 1: r=1+INT(RND*3): php(p)=php(p)+r: Msg pn$(p)+" gains"+STR$(r)+" hit points!": Sfx "good"
+        CASE 1: r=1+INT(RND*3): php(p)=php(p)+r: Msg pn$(p)+" gains "+STR$(r)+" hit points!": Sfx "good"
         CASE 2: pbn(p)=pbn(p)+1: Msg pn$(p)+" feels lucky!": Sfx "good"
         CASE 3: Msg pn$(p)+" is poisoned!": Sfx "bad": Wound p,1+INT(RND*4)
         CASE 4: pbn(p)=MAX(0,pbn(p)-1): Msg pn$(p)+" feels unlucky.": Sfx "bad"
@@ -1360,7 +1398,7 @@ SUB DrawCombat cur
     IF Alive(i) THEN DrawFig OX+cpx(i)*TS,OY+cpy(i)*TS,co(pco(i))
   NEXT
   Panel cur,1
-  TopBar STR$(MonLeft())+" "+UCASE$(mn$(cmt))+"   SPEED"+STR$(msp(cmt)),WHT,&H303030
+  TopBar STR$(MonLeft())+" "+UCASE$(mn$(cmt))+"   SPEED "+STR$(msp(cmt)),WHT,&H303030
   DrawLog
 END SUB
 
@@ -1418,7 +1456,7 @@ END SUB
 
 SUB DmgMon m,dmg,i
   chp(m)=chp(m)-dmg
-  Msg pn$(i)+" hits "+mn$(cmt)+" for"+STR$(dmg)
+  Msg pn$(i)+" hits "+mn$(cmt)+" for "+STR$(dmg)
   IF chp(m)<=0 THEN
     chp(m)=0: Msg "The "+mn$(cmt)+" is eliminated!": Sfx "kill": GainXP i,mxp(cmt)
   ELSE
@@ -1487,7 +1525,7 @@ SUB MAttack t
   IF t=0 THEN EXIT SUB
   IF RND*100<MHit(t) THEN
     dmg=1+INT(RND*mdm(cmt))
-    Msg mn$(cmt)+" hits "+pn$(t)+" for"+STR$(dmg)
+    Msg mn$(cmt)+" hits "+pn$(t)+" for "+STR$(dmg)
     IF pwd(t)+dmg<php(t) THEN Sfx "mhit"
     Wound t,dmg
   ELSE
@@ -1500,7 +1538,7 @@ FUNCTION Negot()
   price=mxp(cmt)*MonLeft()*4+10
   DO
     IF RND*100>=mng(cmt) THEN Msg "Negotiations fail! They attack!": Sfx "guard": negok=0: Negot=3: EXIT FUNCTION
-    Msg "They demand"+STR$(price)+" gold."
+    Msg "They demand "+STR$(price)+" gold."
     Prompt "Y=pay  N=haggle  R=refuse"
     k=GetK()
     IF k=89 THEN
@@ -1664,9 +1702,9 @@ SUB EndScr
     TopBar "THE PARTY HAS BEEN DESTROYED",WHT,&H800000: WrapTx fail$,WHT: Sfx "dead"
   ENDIF
   ry=ry+10
-  RL "Gold:"+STR$(gold)+"    Steps:"+STR$(steps),WHT
+  RL "Gold: "+STR$(gold)+"    Steps: "+STR$(steps),WHT
   FOR i=1 TO np
-    RL pn$(i)+"  level"+STR$(plv(i))+"  xp"+STR$(pxp(i)),co(pco(i))
+    RL pn$(i)+"  level "+STR$(plv(i))+"  xp "+STR$(pxp(i)),co(pco(i))
   NEXT
   Prompt "Press any key"
   k=GetK()
