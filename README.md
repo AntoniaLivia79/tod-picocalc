@@ -309,17 +309,18 @@ Hand-drawn floors keep exactly the features you draw. Monsters, gold, items, the
 The editor is deliberately simple. Possible future features, roughly in order of usefulness:
 
 1. **Graphical map editor** — move a cursor over the grid and place rooms, stairs and links, instead of typing map rows.
-2. **Pick lists** — choose item kinds, classes and colours from menus rather than typing codes, with a colour preview for monsters.
-3. **Balance report** — per floor: monsters available, average monster strength, gold and items on offer.
-4. **Play-test** — save and run `TOD.BAS` on the module directly.
-5. **Search and bulk edit** — find a name across the file, or scale all monster hit points by a percentage.
-6. **Automatic backup** — back up original adv (`.BAK`) on save.
+3. **Pick lists** — choose item kinds, classes and colours from menus rather than typing codes, with a colour preview for monsters.
+4. **Balance report** — per floor: monsters available, average monster strength, gold and items on offer.
+5. **Play-test** — save and run `TOD.BAS` on the module directly.
+6. **Search and bulk edit** — find a name across the file, or scale all monster hit points by a percentage.
+8. **Automatic backup** — Back up ADV file (`.BAK`) on save.
+
 
 ## 4. Developer's guide
 
 ### 4.1 Overview
 
-`TOD.BAS` is a single program using `OPTION EXPLICIT` and `OPTION DEFAULT INTEGER` (the map packing relies on 64-bit integers). Arrays are indexed from 0 (the MMBasic default). The main loop is simply:
+`TOD.BAS` is a single program using `OPTION EXPLICIT` and `OPTION DEFAULT INTEGER` (the map packing relies on 64-bit integers). The main loop is simply:
 
 ```
 DO
@@ -351,7 +352,7 @@ The source is split into commented sections, in this order:
 
 ### 4.3 The map cell
 
-Each floor is `cell(floor, x, y)`, one 64-bit integer per grid cell with all its data packed into bit fields. Always use `CG(x,y,shift,bits)` and `CS x,y,shift,bits,value`; both act on the current floor `fl`.
+Each floor is `cell(floor, x, y)`, one 64-bit integer per grid cell with all its data packed into bit fields. `LoadModule` sizes the array to exactly the module's `FLOORS` and `GRID` (`ERASE cell` then `DIM cell(nfl,gw-1,gh-1)`), so loop over `gw-1`/`gh-1`, never fixed sizes. Always use `CG(x,y,shift,bits)` and `CS x,y,shift,bits,value`; both act on the current floor `fl`.
 
 | Constant | Bit | Width | Holds |
 |---|---|---|---|
@@ -367,6 +368,8 @@ Each floor is `cell(floor, x, y)`, one 64-bit integer per grid cell with all its
 | `BMP` | 41 | 1 | this floor's map is here |
 
 Directions are 0=N, 1=E, 2=S, 3=W with offsets in `DX()`/`DY()`. `Link x,y,d` opens a two-way exit between neighbouring cells. Stair positions are kept in `upx()/upy()/dnx()/dny()` per floor.
+
+Hand-drawn `MAP` rows are not kept in memory. `LoadModule` only counts them per floor (`fmn()`); `ParseMap` reads them back from the module file while that floor is being built, so the `.ADV` file must stay on the card (it is needed anyway to continue a saved game).
 
 ### 4.4 Game state
 
@@ -415,3 +418,10 @@ name,class,colour,hp,bonus      (one line per player; class 1-4, colour 1-4)
 6. for each floor: `mapf,upx,upy,dnx,dny`, then one line per grid row holding the packed cell values
 
 On loading, the module is read first (for item and monster tables), then the saved state overwrites everything else. If you add a new piece of game state, add it to both `SaveGame` and `LoadGame` and change the `TODSAVE1` header so old saves are refused.
+
+### 4.8 Extending the game
+
+- **New room feature**: add a constant, give it a letter in `ParseMap`'s `"RUDSFVCT"` / `"07683214"` strings, a chance in `Populate`, a drawing in `DrawArena`, and a `CASE` in `Treasure`.
+- **New magic effect**: add a `CASE` in `UseMagic` and document the number for module writers.
+- **New module keyword**: add a `CASE` in `LoadModule`, set a default at the top of that routine, and clamp the value.
+- **Wider or taller grids**: `cell()` and the `GRID` limit are 14×10; the map screen scales automatically, but `SaveGame` row lines must stay under 255 characters (each cell can take up to 14 characters).

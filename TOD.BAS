@@ -18,7 +18,8 @@ CONST TS=24, OX=10, OY=24, PANX=236
 CONST BLK=0, WHT=&HFFFFFF, YEL=&HFFFF00, CYN=&H00FFFF, GRY=&H909090, GRN=&H58D878
 
 ' ---------- module data ----------
-DIM cell(MAXF,13,9)
+' cell() is resized in LoadModule to exactly FLOORS x GRID of the module
+DIM cell(1,1,1)
 DIM modf$, ttl$, win$, fail$
 DIM intro$(5) LENGTH 160
 DIM kit$(24) LENGTH 30
@@ -36,7 +37,6 @@ DIM mcol(MAXM), mhp(MAXM), matk(MAXM), mdf(MAXM), mdm(MAXM), msp(MAXM), mxp(MAXM
 DIM mlo(MAXM), mhi(MAXM), mmx(MAXM), mrg(MAXM), mng(MAXM)
 DIM qn$(MAXQ) LENGTH 24
 DIM qf(MAXQ), qt(MAXQ), qs(MAXQ)
-DIM mrow$(MAXF,18) LENGTH 29
 DIM fmn(MAXF)
 ' ---------- party ----------
 DIM np, pcl(4), pco(4), php(4), pwd(4), pxp(4), plv(4), pbn(4), pcw(4), par(4), psh(4), phl(4)
@@ -270,12 +270,14 @@ SUB LoadModule f$
       CASE "FLOOR": n=NF(a$,2)
       CASE "MAP"
         IF n>=1 AND n<=MAXF THEN
-          IF fmn(n)<19 THEN mrow$(n,fmn(n))=MID$(a$,5,29): fmn(n)=fmn(n)+1
+          IF fmn(n)<19 THEN fmn(n)=fmn(n)+1
         ENDIF
     END SELECT
   LOOP
   CLOSE #1
   modf$=f$
+  ERASE cell
+  DIM cell(nfl,gw-1,gh-1)
 END SUB
 
 FUNCTION FindItem(n$)
@@ -332,7 +334,7 @@ SUB GenFloor f
   LOCAL i, j, x, y, n, t, bd, bj, d
   LOCAL rx(40), ry2(40)
   fl=f
-  FOR y=0 TO 9: FOR x=0 TO 13: cell(f,x,y)=0: NEXT: NEXT
+  FOR y=0 TO gh-1: FOR x=0 TO gw-1: cell(f,x,y)=0: NEXT: NEXT
   IF fmn(f)>0 THEN
     ParseMap f
   ELSE
@@ -397,11 +399,23 @@ SUB Link x,y,d
 END SUB
 
 ' Hand-drawn floor: even rows = cells (even cols) and "-" links, odd rows = "|" links
+' The MAP rows are not kept in memory: LoadModule only counts them
+' (fmn), and they are read back from the module file here.
 SUB ParseMap f
-  LOCAL r, c, i, x, y, ch$
-  FOR r=0 TO fmn(f)-1
-    FOR c=1 TO LEN(mrow$(f,r))
-      ch$=UCASE$(MID$(mrow$(f,r),c,1)): x=(c-1)\2: y=r\2
+  LOCAL r, c, i, x, y, n, nr, ch$, a$, k$
+  LOCAL mr$(18) LENGTH 29
+  n=-1
+  OPEN modf$ FOR INPUT AS #3
+  DO WHILE NOT EOF(#3)
+    LINE INPUT #3, a$
+    k$=UCASE$(FS$(a$,1))
+    IF k$="FLOOR" THEN n=NF(a$,2)
+    IF k$="MAP" AND n=f AND nr<19 THEN mr$(nr)=MID$(a$,5,29): nr=nr+1
+  LOOP
+  CLOSE #3
+  FOR r=0 TO nr-1
+    FOR c=1 TO LEN(mr$(r))
+      ch$=UCASE$(MID$(mr$(r),c,1)): x=(c-1)\2: y=r\2
       IF x<gw AND y<gh THEN
         IF (r MOD 2)=0 AND (c MOD 2)=1 THEN
           IF ch$="+" THEN CS x,y,BTY,2,1
