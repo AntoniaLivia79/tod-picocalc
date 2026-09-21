@@ -1,13 +1,15 @@
 # Tunnels of Doom — PicoMite / PicoCalc edition
 
-A simplified port of Kevin Kenney's 1982 TI-99/4A dungeon adventure, written in PicoMite (MMBasic) BASIC for the PicoCalc.
+A simplified port of Kevin Kenney's 1982 TI-99/4A dungeon adventure, written in PicoMite (MMBasic) BASIC for the PicoCalc and its 320×320 LCD.
 
 | File | Purpose |
 |---|---|
 | `TOD.BAS` | The game |
 | `PARTY.BAS` | Party creator — writes `PARTY.DAT` |
 | `QUEST.ADV` | "Quest of the King", the classic adventure (4 floors, monsters, time limits) |
-| `PENNIES.ADV` | "Pennies and Prizes", a gentle adventure (no monsters) |
+| `ADVEDIT.BAS` | Adventure editor — edit `.ADV` modules on the PicoCalc |
+| `PENNIES.ADV` | "Pennies and Prizes", a gentle children's adventure (no monsters) |
+| `screens/` | Screenshots rendered from the game's own drawing commands |
 
 ---
 
@@ -26,9 +28,15 @@ Along the way you will find:
 - **Living statues** that will identify an unknown magic item for a price — or crush it.
 - **General stores** on the surface and on selected floors.
 
+Differences from the original: the game fits in one program of about 1,600 lines, so some things are simplified. Graphics are drawn with simple shapes and sound effects are simple tones; the map, combat arena and screens are laid out for a 320×320 display. In exchange, adventures are loaded from plain text files, so you can write your own.
+
 ### Requirements
 
-- The four files copied to the PicoCalc SD card (the game looks for `*.ADV`, `PARTY.DAT` and `TODSAVE.DAT` in the current directory).
+- A PicoMite-family device with a 320×320 display (PicoCalc), or any PicoMite with a display at least 320×320.
+- Audio output for `PLAY TONE` (the PicoCalc's speakers).
+- The four files copied to the root of the SD card (the game looks for `*.ADV`, `PARTY.DAT` and `TODSAVE.DAT` in the current directory).
+
+The game logic has been tested extensively on MMB4L (the Linux build of MMBasic), including dungeon generation, long random play sessions, save/load round-trips and the full menu flow. Screen appearance, speed and memory use have **not** been verified on real PicoCalc hardware.
 
 ---
 
@@ -146,6 +154,24 @@ Press **K** at any time while exploring to save to `TODSAVE.DAT`. There is one s
 ## 3. Writing adventure modules
 
 A module is a plain text file with the extension `.ADV`. Put it next to `TOD.BAS` and it appears in the New Quest list (up to 9 modules are listed). `QUEST.ADV` is heavily commented and is the best starting point to copy.
+
+### 3.0 Using the adventure editor
+
+`ADVEDIT.BAS` edits modules on the PicoCalc itself. Run it, pick an `.ADV` file (or press **N** to start from a small working template), and use the main menu:
+
+| Key | Action |
+|---|---|
+| `1`–`7` | open a section: story text, settings, items, starting kits, monsters, quest objects, floor maps |
+| `8` | every line of the file, including comments, for raw editing |
+| `V` | validate the module (see below) |
+| `S` / `A` | save, or save as a new file (asks before replacing a file) |
+| `L` / `Q` | load another file / quit (both warn about unsaved changes) |
+
+In a section list: **ENTER** edits the highlighted line, **I** inserts a new one (pre-filled with sensible values), **C** copies it, **X** deletes it, **U**/**M** move it up/down, **ESC** goes back. Editing a monster or item shows each field with its name, e.g. *Hit points*, *Max floor*, *Cost 0=not sold*. Number fields only accept numbers (including `&H` colours), and commas are refused because they separate fields. Map rows keep their leading spaces.
+
+The editor keeps the file as text lines, so your comments, blank lines and line order are saved exactly as they were. Files can hold up to 220 lines of up to 200 characters.
+
+**Validate** checks what `TOD.BAS` would silently ignore or get wrong: unknown keywords, repeated settings, too few fields, non-numbers, item kinds, ranged weapons with no matching ammunition, kits naming items that don't exist, monster floor ranges and group sizes, quest floors, map rows that are too long or wider than the grid, maps without stairs, and the limits on counts.
 
 ### 3.1 File rules
 
@@ -278,11 +304,23 @@ Hand-drawn floors keep exactly the features you draw. Monsters, gold, items, the
 
 ---
 
+### 3.10 Editor roadmap
+
+The editor is deliberately simple. Possible future features, roughly in order of usefulness:
+
+1. **Graphical map editor** — move a cursor over the grid and place rooms, stairs and links, instead of typing map rows.
+2. **Randomisers** — generate a monster, item, quest name or a whole floor map at random, with stats scaled to the floor.
+3. **Pick lists** — choose item kinds, classes and colours from menus rather than typing codes, with a colour preview for monsters.
+4. **Balance report** — per floor: monsters available, average monster strength, gold and items on offer.
+5. **Play-test button** — save and run `TOD.BAS` on the module directly.
+6. **Search and bulk edit** — find a name across the file, or scale all monster hit points by a percentage.
+7. **Undo** for the last change, and automatic backup (`.BAK`) on save.
+
 ## 4. Developer's guide
 
 ### 4.1 Overview
 
-`TOD.BAS` is a single program using `OPTION EXPLICIT` and `OPTION DEFAULT INTEGER` (the map packing relies on 64-bit integers). Arrays are indexed from 0. The main loop is simply:
+`TOD.BAS` is a single program using `OPTION EXPLICIT` and `OPTION DEFAULT INTEGER` (the map packing relies on 64-bit integers). Arrays are indexed from 0 (the MMBasic default). The main loop is simply:
 
 ```
 DO
