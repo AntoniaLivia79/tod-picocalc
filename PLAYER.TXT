@@ -30,6 +30,8 @@ GOAL
 Find every quest object, then climb
 the up-stairs on floor 1 to win.
 Some objects have a time limit!
+Press 2 to see the turns left
+(1 turn = 10 steps).
 
 EXPLORING
 ---------
@@ -47,7 +49,7 @@ U         use magic item
 T         trade or drop magic item
 O         change who leads
 L         listen at a door
-K         save game
+K         save game (hallway only)
 Q         abandon quest
 ?  or H   command help
 
@@ -62,7 +64,7 @@ whose turn it is.
 
 Arrow     step, or hit adjacent foe
 F         fire ranged weapon; aim
-          with arrows, SPACE fires
+          with arrow keys, SPACE fires
 W         switch weapon
 N         negotiate: Y pay,
           N haggle, R refuse
@@ -73,6 +75,11 @@ HP = hit points, WD = wounds taken.
 When WD reaches HP the player falls.
 ++ + 0 - -- shows your odds in a
 fight: ++ is best, -- is worst.
+
+A player can carry two weapons. If
+both are full you are shown them both
+and asked which to replace. ESC keeps
+what you have.
 
 ROOMS
 -----
@@ -85,7 +92,8 @@ Fountain  One drink each. Good or
 Statue    Pay gold to identify a
           magic item. Pay too
           little and it may break.
-Store     Buy more supplies.
+Store     Buy more supplies. Use < and
+          > to turn the page.
 
 STAYING ALIVE
 -------------
@@ -100,7 +108,10 @@ STAYING ALIVE
 
 SAVING
 ------
-Press K to save to TODSAVE.DAT.
+Press K in a HALLWAY to save. You
+cannot save inside a room - step out
+into the hallway first.
+Saved to TODSAVE.DAT.
 There is one save slot. Choose C on
 the title screen to continue. Keep
 the .ADV file on the card.

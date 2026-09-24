@@ -1,0 +1,135 @@
+# =====================================================================
+# PROVING GROUNDS OF THE MAD OVERLORD
+# An adventure module for TUNNELS OF DOOM (PicoMite / PicoCalc),
+# freely inspired by Sir-Tech's 1981 dungeon crawl "Wizardry".
+# Ten maze levels, four things to find, and Werdna waiting at the end.
+# All text here is original. See README.md for the file format.
+# =====================================================================
+
+TITLE,Wizardry
+
+INTRO,Proving Grounds of the Mad Overlord.
+INTRO,The overlord Trebor is a proud man and a foolish one. A wizard
+INTRO,named Werdna has stolen the amulet that guards the realm and has
+INTRO,carried it ten levels down beneath the castle. Find the three
+INTRO,keys that open his sanctum, take back the amulet, and climb out.
+
+WIN,You climb into the courtyard with the amulet burning cold in your hands. Trebor has his treasure back, and your names are cut into the castle wall.
+FAIL,The maze keeps what it takes. Somewhere below, Werdna laughs and returns to his work.
+
+# --------------------------------------------------------------- maze
+FLOORS,10
+GRID,14,10
+ROOMS,16
+GOLD,200,160,130
+WANDER,8
+NEEDMAP,1
+# Boltac keeps a stall at the third and seventh levels
+STORE,3,7
+SEED,0
+
+# --------------------------------------------------------------- goods
+# The store sells the first 17 items that have a price.
+ITEM,W,Dagger,4,0,6,FWRH,
+ITEM,W,Short Sword,6,0,18,FRH,
+ITEM,W,Long Sword,9,0,60,FH,
+ITEM,W,Mace,7,0,32,FRH,
+ITEM,W,Staff,5,0,12,FWRH,
+ITEM,R,Sling,4,1,10,FWRH,
+ITEM,R,Short Bow,6,2,35,FRH,
+ITEM,X,Sling Stones,20,1,3,,
+ITEM,X,Arrows,20,2,20,,
+ITEM,A,Leather Armor,1,0,15,FRH,
+ITEM,A,Chain Mail,3,0,70,FH,
+ITEM,A,Plate Mail,4,0,160,FH,
+ITEM,S,Small Shield,1,0,20,FRH,
+ITEM,S,Large Shield,2,0,60,FH,
+ITEM,P,Rations,10,0,20,,
+ITEM,H,Bandages,12,0,30,,
+ITEM,H,Salve of Dios,20,0,70,,
+# found in the maze, never sold
+ITEM,W,Anointed Mace,11,0,0,FH,
+ITEM,W,Ebon Blade,13,0,0,FH,
+ITEM,R,Crossbow,9,3,0,FH,
+ITEM,X,Quarrels,10,3,0,,
+ITEM,A,Elven Cloak,2,0,0,FWRH,
+ITEM,A,Mythril Plate,6,0,0,FH,
+ITEM,S,Shield of Embers,3,0,0,FH,
+ITEM,M,Potion of Dios,1,10,0,FWRH,Potion
+ITEM,M,Potion of Madios,1,20,0,FWRH,Potion
+ITEM,M,Draught of Serpents,2,6,0,FWRH,Potion
+ITEM,M,Scroll of Halito,3,6,0,WH,Scroll
+ITEM,M,Scroll of Mahalito,3,12,0,WH,Scroll
+ITEM,M,Scroll of Badios,4,10,0,WH,Scroll
+ITEM,M,Scroll of Dumapic,5,1,0,WH,Scroll
+ITEM,M,Ring of Vigour,6,3,0,FWRH,Ring
+ITEM,M,Ring of Skill,7,1,0,FWRH,Ring
+ITEM,M,Ring of Worms,2,8,0,FWRH,Ring
+
+# ------------------------------------------------------------ starting kit
+KIT,F,Long Sword
+KIT,F,Leather Armor
+KIT,F,Small Shield
+KIT,H,Long Sword
+KIT,H,Leather Armor
+KIT,R,Short Sword
+KIT,R,Leather Armor
+KIT,W,Staff
+KIT,W,Scroll of Halito
+KIT,FWRH,Rations
+
+# --------------------------------------------------------------- monsters
+# name,glyph,colour,hp,attack,defense,damage,speed,xp,min,max,group,ranged,talk%,sound
+MON,Bubbly Slime,b,&H60C060,4,1,0,2,1,3,1,2,5,0,0,a wet slapping
+MON,Kobold,k,&HB08040,5,2,1,3,1,4,1,3,5,0,20,yapping voices
+MON,Orc,o,&H408020,7,3,1,4,1,6,1,4,5,0,15,grunting and clatter
+MON,Creeping Coin,c,&HFFD030,6,3,2,4,1,8,2,5,4,0,0,a faint chinking
+MON,Skeleton,s,&HE0E0E0,8,4,2,5,1,10,2,5,5,0,0,dry bones rattling
+MON,Rogue,r,&H8040A0,10,5,3,6,1,14,2,6,4,0,45,whispering in the dark
+MON,Zombie,z,&H808060,14,5,2,6,1,18,3,6,4,0,0,a slow dragging
+MON,Highwayman,h,&HC08040,13,6,3,7,1,22,3,7,4,1,40,boots and low laughter
+MON,Murphy's Ghost,g,&HA0D0FF,18,6,4,7,1,30,4,7,2,0,0,a cold humming
+MON,Gas Cloud,#,&H90FF90,16,7,4,8,1,34,4,8,3,1,0,a hissing seep
+MON,Were Bear,W,&H906030,24,8,4,10,1,45,5,8,3,0,0,heavy snuffling
+MON,Priestess,p,&HFF80C0,20,8,5,9,1,48,5,9,3,1,35,a chanted prayer
+MON,Vorpal Bunny,v,&HFFFFFF,15,10,6,9,2,55,6,9,3,0,0,a rapid thumping
+MON,Gaze Hound,d,&HC0C040,22,9,5,10,2,60,6,9,3,0,0,padding claws
+MON,Dragon Fly,f,&H40C0FF,20,9,5,11,2,65,7,10,4,1,0,a dry buzzing
+MON,Lifestealer,l,&H8000A0,26,10,6,12,1,80,7,10,3,1,0,a long sighing
+MON,Will O Wisp,w,&HFFFF80,18,12,8,10,2,95,8,10,3,1,0,a crackling glow
+MON,Fire Giant,F,&HFF6020,40,12,7,15,1,120,8,10,3,0,20,thunderous footsteps
+MON,Poison Giant,P,&H60A040,42,12,7,16,1,130,9,10,2,1,20,a rasping cough
+MON,Maelific,M,&HFF4040,38,13,8,14,1,150,9,10,2,1,0,a whispered spell
+MON,Vampire Lord,V,&H800020,45,14,9,16,1,180,10,10,2,0,25,silk and dry wings
+MON,Greater Demon,X,&HD00000,55,15,10,18,1,220,10,10,2,0,0,a deep bellow
+MON,Werdna,Z,&H8020FF,70,16,11,20,2,400,11,11,1,1,0,slow patient breathing
+
+# ------------------------------------------------------------ quest objects
+# The keys are gathered on the way down; the amulet is the main goal.
+QUEST,Bronze Key,4,0
+QUEST,Silver Key,7,0
+QUEST,Gold Key,9,0
+QUEST,Amulet of Trebor,10,0
+
+# ---------------------------------------------------------------- level 1
+# Hand-drawn. Stairs up at the bottom left, stairs down at the top right.
+FLOOR,1
+MAP,+-R-+ +-+-+-F-+ +-+-+-+-+-D
+MAP,|   |   |   | | |     |   |
+MAP,+ +-+-+ +-+ + + + +-+ + +-+
+MAP,|     |     |   | | | | |
+MAP,+ +-+ +-+-+ +-+-+ +-+-+ +-+
+MAP,| | |     | |     |       |
+MAP,+-+-+-+ +-+-+ +-+-+ +-+-+ +
+MAP,|     | |     |         | |
+MAP,+ +-+-+ +-+-+-T +-+-+-R-+-+
+MAP,  |     |       |       | |
+MAP,+-+ +-+-+ +-+-+ +-+ +-+-+ +
+MAP,|   |   | |   | | | |     |
+MAP,+ +-+ +-+ + +-V + + R +-+ +
+MAP,| | | |   | |   | | |   | |
+MAP,+ + + + + + R-+-+ + +-+-+ +
+MAP,| | | | | |       |   |   |
+MAP,+ + + +-+ + +-+-+ +-+ + +-+
+MAP,| | |     | |   |   |   |
+MAP,U + C-+-R-+-+ +-+-+ +-+-+-+

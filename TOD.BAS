@@ -8,6 +8,8 @@ OPTION EXPLICIT
 OPTION DEFAULT INTEGER
 
 CONST MAXF=10, MAXI=48, MAXM=24, MAXQ=8
+CONST SPG=12             ' store items to a page
+CONST TBEAT=450          ' title tune tempo: ms per quarter note
 CONST KUP=128, KDN=129, KLF=130, KRT=131, KEN=13, KESC=27
 ' Bit fields packed into cell(): exits,type,feature,monster,count,seen,quest,item,gold,map
 CONST BMK=0, BTY=4, BFE=6, BMO=10, BMC=15, BSE=18, BQS=19, BIM=23, BGD=31, BMP=41
@@ -24,7 +26,7 @@ DIM modf$, ttl$, win$, fail$
 DIM intro$(5) LENGTH 160
 DIM kit$(24) LENGTH 30
 DIM nfl, gw, gh, nrm, wander, needmap, st1, st2, seed, nitm, nmon, nq, nintro, nkit
-DIM sgold(3), sidx(20)
+DIM sgold(3), sidx(40)
 DIM itk$(MAXI) LENGTH 1
 DIM itn$(MAXI) LENGTH 20
 DIM igen$(MAXI) LENGTH 14
@@ -52,6 +54,12 @@ DIM fls$(9) LENGTH 20
 ' ---------- combat ----------
 DIM nmc, cmt, cmx(8), cmy(8), chp(8), cpx(4), cpy(4), ay0, ay1, negok, cfe, hallc, cdx, cdy
 DIM DX(3), DY(3), ins(5)
+' What is on screen: scrv 0 = unknown (any Clr), 1 = room view,
+' 2 = combat, 3 = hallway. vf/vx/vy/vd/vsig say which view it was.
+DIM scrv, vf, vx, vy, vd, vsig, pnsig, tbn
+' fset=1 once the monsters of the room at fsf/fsx/fsy have been given
+' their starting positions, so the room view can show them there.
+DIM fset, fsf, fsx, fsy
 
 DX(1)=1: DX(3)=-1: DY(0)=-1: DY(2)=1
 ins(1)=46: ins(2)=82: ins(3)=106: ins(4)=121: ins(5)=130
@@ -67,7 +75,7 @@ END
 
 '===================== graphics wrappers ============================
 SUB Clr c
-  CLS c
+  CLS c: scrv=0: pnsig=-1: tbn=-1
 END SUB
 SUB TxL x,y,s$,c,b
   TEXT x,y,s$,"LT",1,1,c,b
@@ -149,7 +157,6 @@ SUB Sfx e$
     CASE "stdown": SndSeq "523/50,440/50,392/50,330/80"
     CASE "stup": SndSeq "330/50,392/50,440/50,523/80"
     CASE "save": SndSeq "880/30,1175/50"
-    CASE "title": SndSeq "262/90,330/90,392/90,523/220"
     CASE "win": SndSeq "523/120,523/60,523/60,784/300,659/120,784/400"
     CASE "dead": SndSeq "392/200,370/200,349/200,330/500"
   END SELECT
@@ -521,9 +528,11 @@ FUNCTION GiveItem(p,it,quiet)
       IF pw(p,0)=0 THEN s=0
       IF s<0 THEN
         IF quiet THEN EXIT FUNCTION
-        Prompt pn$(p)+": replace weapon 1/2? ESC=no"
+        Msg pn$(p)+" takes "+itn$(it)+" and carries:"
+        Msg "  1 "+LEFT$(WName$(p,0)+SPACE$(16),16)+"  2 "+LEFT$(WName$(p,1),16)
+        Prompt "Replace which? 1, 2, ESC=keep both"
         s=GetK()-49
-        IF s<0 OR s>1 THEN EXIT FUNCTION
+        IF s<0 OR s>1 THEN Msg pn$(p)+" leaves "+itn$(it)+".": EXIT FUNCTION
       ENDIF
       pw(p,s)=it: pam(p,s)=0
     CASE "X"
@@ -585,7 +594,7 @@ FUNCTION UseMagic(u,cmb)
   it=pmi(u,s)
   IF INSTR(icl$(it),MID$("FWRH",pcl(u),1))=0 THEN Msg pn$(u)+" cannot use that.": EXIT FUNCTION
   pmi(u,s)=0: ident(it)=1: e=iv1(it): pw2=MAX(1,iv2(it))
-  IF cmb THEN DrawCombat u ELSE Redraw
+  IF cmb THEN CombatView u ELSE Redraw
   Msg pn$(u)+" uses "+itn$(it)
   IF e=2 THEN Sfx "bad" ELSE Sfx "magic"
   SELECT CASE e
@@ -633,7 +642,10 @@ END FUNCTION
 SUB Wound t,dmg
   IF pwd(t)>=php(t) THEN EXIT SUB
   pwd(t)=MIN(php(t),pwd(t)+dmg)
-  IF pwd(t)>=php(t) THEN Msg pn$(t)+" is disabled!": Sfx "down"
+  IF pwd(t)>=php(t) THEN
+    Msg pn$(t)+" is disabled!": Sfx "down"
+    IF scrv=2 THEN DrawTile cpx(t),cpy(t)
+  ENDIF
 END SUB
 FUNCTION Prot(i)
   Prot=iv1(par(i))+iv1(psh(i))
@@ -760,11 +772,12 @@ SUB DrawHall
   NEXT
   TopBar "FLOOR "+STR$(fl)+"  FACING "+MID$("NORTHEAST SOUTHWEST",pd*5+1,5)+"  GOLD "+STR$(gold),0,GRN
   DrawLog
+  MarkView 3
 END SUB
 
 ' room / combat arena. hall=1 draws a 3-row corridor strip
 SUB DrawArena hall
-  LOCAL m, x, y, fe, fc
+  LOCAL m, fc
   Clr 0: fc=&HC8C8C8
   IF hall THEN
     Bx OX-4,OY+3*TS-4,9*TS+8,3*TS+8,&H303030,&H303030
@@ -778,27 +791,69 @@ SUB DrawArena hall
   IF m AND 2 THEN Bx OX+9*TS,OY+4*TS,4,TS,fc,fc
   IF m AND 4 THEN Bx OX+4*TS,OY+9*TS,TS,4,fc,fc
   IF m AND 8 THEN Bx OX-4,OY+4*TS,4,TS,fc,fc
-  x=OX+4*TS+12: y=OY+4*TS+12: fe=CG(px,py,BFE,4)
-  SELECT CASE fe
-    CASE FCH: Bx x-10,y-7,20,14,0,&H905020: Ln x-10,y-2,x+9,y-2,0
-    CASE FVA: Bx x-11,y-11,22,22,0,&H606070: Ci x,y,6,YEL,&H606070
-    CASE FFO: Ci x,y,10,&H0000C0,&H40A0FF
-    CASE FST: Ci x,y-6,4,GRY,GRY: Bx x-4,y-2,9,12,GRY,GRY
-    CASE FDN,FUP
-      Bx x-11,y-11,22,22,0,WHT
-      FOR m=0 TO 3: Ln x-11,y-11+m*6,x+10,y-11+m*6,0: NEXT
-      IF fe=FDN THEN TxL x-4,y-6,"v",0,WHT ELSE TxL x-4,y-6,"^",0,WHT
-    CASE FSH: TxA x,y-12,"$","CT",2,&H00A000,fc
-  END SELECT
+  DrawObj 4,4: DrawObj 2,6: DrawObj 6,2: DrawObj 2,2: DrawObj 6,6
+END SUB
+' The room object that lives on arena tile c,r (if any): the feature
+' in the centre, gold, item, quest object and map in the four corners.
+SUB DrawObj c,r
+  LOCAL x, y, fe, m, fc
+  fc=&HC8C8C8: fe=CG(px,py,BFE,4)
+  x=OX+c*TS+12: y=OY+r*TS+12
+  IF c=4 AND r=4 THEN
+    SELECT CASE fe
+      CASE FCH: Bx x-10,y-7,20,14,0,&H905020: Ln x-10,y-2,x+9,y-2,0
+      CASE FVA: Bx x-11,y-11,22,22,0,&H606070: Ci x,y,6,YEL,&H606070
+      CASE FFO: Ci x,y,10,&H0000C0,&H40A0FF
+      CASE FST: Ci x,y-6,4,GRY,GRY: Bx x-4,y-2,9,12,GRY,GRY
+      CASE FDN,FUP
+        Bx x-11,y-11,22,22,0,WHT
+        FOR m=0 TO 3: Ln x-11,y-11+m*6,x+10,y-11+m*6,0: NEXT
+        IF fe=FDN THEN TxL x-4,y-6,"v",0,WHT ELSE TxL x-4,y-6,"^",0,WHT
+      CASE FSH: TxA x,y-12,"$","CT",2,&H00A000,fc
+    END SELECT
+    EXIT SUB
+  ENDIF
   IF fe=FCH OR fe=FVA THEN EXIT SUB
-  IF CG(px,py,BGD,10) THEN Ci OX+2*TS+12,OY+6*TS+12,7,0,YEL
-  IF CG(px,py,BIM,8) THEN Tr OX+6*TS+12,OY+2*TS+3,OX+6*TS+3,OY+2*TS+21,OX+6*TS+21,OY+2*TS+21,&HE000E0
-  IF CG(px,py,BQS,4) THEN TxA OX+2*TS+12,OY+2*TS+4,"*","CT",2,&HFF8000,fc
-  IF CG(px,py,BMP,1) THEN Bx OX+6*TS+4,OY+6*TS+6,16,12,0,&HF0E0A0
+  IF c=2 AND r=6 AND CG(px,py,BGD,10) THEN Ci x,y,7,0,YEL
+  IF c=6 AND r=2 AND CG(px,py,BIM,8) THEN Tr x,y-9,x-9,y+9,x+9,y+9,&HE000E0
+  IF c=2 AND r=2 AND CG(px,py,BQS,4) THEN TxA x,y-8,"*","CT",2,&HFF8000,fc
+  IF c=6 AND r=6 AND CG(px,py,BMP,1) THEN Bx x-8,y-6,16,12,0,&HF0E0A0
+END SUB
+' Repaint one combat tile: floor, room object, then who stands on it.
+SUB DrawTile c,r
+  LOCAL x, y, j, fc
+  IF scrv<>2 THEN EXIT SUB
+  fc=&HC8C8C8: x=OX+c*TS: y=OY+r*TS
+  Bx x,y,TS,TS,fc,fc
+  IF hallc=0 THEN DrawObj c,r
+  FOR j=1 TO nmc
+    IF chp(j)>0 AND cmx(j)=c AND cmy(j)=r THEN DrawMon c,r,cmt
+  NEXT
+  FOR j=1 TO np
+    IF Alive(j) AND cpx(j)=c AND cpy(j)=r THEN DrawFig x,y,co(pco(j))
+  NEXT
 END SUB
 
+' Everything the side panel shows, as one number (see PanelIf)
+FUNCTION PanSig(cur,cmb)
+  LOCAL h, i, j, s$
+  h=cur*3+cmb
+  FOR i=1 TO np
+    h=(h*31+php(i)*1000+pwd(i)*2+Alive(i)) MOD 1000000007
+    IF cmb THEN
+      s$=Ind$(i)
+      FOR j=1 TO LEN(s$): h=(h*7+ASC(MID$(s$,j,1))) MOD 1000000007: NEXT
+    ENDIF
+  NEXT
+  PanSig=h
+END FUNCTION
+SUB PanelIf cur,cmb
+  IF PanSig(cur,cmb)<>pnsig THEN Panel cur,cmb
+END SUB
 SUB Panel cur,cmb
   LOCAL i, y, c
+  pnsig=PanSig(cur,cmb)
+  Bx PANX,OY,320-PANX,np*55,0,0
   FOR i=1 TO np
     y=OY+(i-1)*55: c=co(pco(i))
     IF cur=i THEN TxL PANX,y,STR$(i)+" "+LEFT$(pn$(i),8),0,c ELSE TxL PANX,y,STR$(i)+" "+LEFT$(pn$(i),8),c,0
@@ -814,7 +869,10 @@ SUB DrawRoomScr
   DrawArena 0
   mt=CG(px,py,BMO,5): n=CG(px,py,BMC,3)
   IF mt>0 THEN
-    FOR i=1 TO n: DrawMon i,1,mt: NEXT
+    IF Placed()=0 THEN SetupFight 0,mt,n
+    FOR i=1 TO nmc
+      IF chp(i)>0 THEN DrawMon cmx(i),cmy(i),cmt
+    NEXT
   ENDIF
   SetSlots 0
   FOR i=1 TO np
@@ -823,10 +881,33 @@ SUB DrawRoomScr
   Panel 0,0
   TopBar "FLOOR "+STR$(fl)+"  ROOM  GOLD "+STR$(gold),WHT,&H303030
   DrawLog
+  MarkView 1
 END SUB
 
+' Everything the room and hallway views show, folded into one number,
+' so a redraw can be skipped when nothing visible has changed.
+FUNCTION ScrSig()
+  LOCAL h, i
+  h=fl*7919+px*211+py*17+pd*3+inrm
+  h=(h*31+gold) MOD 1000000007
+  h=(h*31+(cell(fl,px,py) MOD 1000000007)) MOD 1000000007
+  FOR i=1 TO np
+    h=(h*31+pco(i)*1000000+php(i)*1000+pwd(i)) MOD 1000000007
+  NEXT
+  ScrSig=h
+END FUNCTION
+SUB MarkView k
+  scrv=k: vf=fl: vx=px: vy=py: vd=pd: vsig=ScrSig()
+END SUB
+' Redraw the room or hallway only if what it shows has changed.
 SUB Redraw
-  IF inrm THEN DrawRoomScr ELSE DrawHall
+  LOCAL same
+  IF scrv>0 AND vf=fl AND vx=px AND vy=py THEN same=(vsig=ScrSig())
+  IF inrm THEN
+    IF same=0 OR scrv<>1 THEN DrawRoomScr
+  ELSE
+    IF same=0 OR scrv<>3 OR vd<>pd THEN DrawHall
+  ENDIF
   Prompt "Select movement option  (?=help)"
 END SUB
 
@@ -918,24 +999,27 @@ SUB PlayerRpt
 END SUB
 
 SUB PartyRpt
-  LOCAL i, q, k, s$
+  LOCAL i, q, k, c, t, s$
   Clr 0: TopBar "PARTY REPORT",0,YEL
   ry=24
   RL "Gold: "+STR$(gold)+"    Rations: "+STR$(rat),WHT
   RL "Steps taken: "+STR$(steps),WHT
   ry=ry+6: RL "QUEST OBJECTS",YEL
   FOR q=1 TO nq
+    c=WHT
     IF qs(q)=1 THEN
-      s$="FOUND"
+      s$="FOUND": c=GRN
     ELSEIF qs(q)=2 THEN
-      s$="DESTROYED"
+      s$="DESTROYED": c=&HFF4040
     ELSEIF qt(q)>0 THEN
-      s$=STR$(qt(q))
+      s$=STR$(qt(q))+" turns left": t=1
+      IF qt(q)<=10 THEN c=&HFF4040 ELSE c=YEL
     ELSE
-      s$="-"
+      s$="no time limit"
     ENDIF
-    RL LEFT$(qn$(q)+SPACE$(24),24)+s$,WHT
+    RL LEFT$(qn$(q)+SPACE$(24),24)+s$,c
   NEXT
+  IF t THEN RL "1 turn = 10 steps. Next in "+STR$(10-steps MOD 10)+" steps.",GRY
   ry=ry+6: RL "SUMMARY            HP   WD  LVL",YEL
   FOR i=1 TO np
     RL LEFT$(pn$(i)+SPACE$(18),18)+RIGHT$("   "+STR$(php(i)),4)+RIGHT$("    "+STR$(pwd(i)),5)+RIGHT$("    "+STR$(plv(i)),5),co(pco(i))
@@ -968,7 +1052,8 @@ SUB HelpScr
   RL "M map   1 players  2 party  3 monsters",WHT
   RL "U use magic item   T trade item",WHT
   RL "O change formation L listen at door",WHT
-  RL "K save game        Q quit quest",WHT
+  RL "K save game (hallway only)",WHT
+  RL "Q quit quest",WHT
   ry=ry+8: RL "COMBAT",YEL
   RL "Arrow: step, or attack adjacent foe",WHT
   RL "F fire ranged weapon (SPACE fires)",WHT
@@ -981,37 +1066,113 @@ SUB HelpScr
 END SUB
 
 '===================== store ======================================
+' Store list. With a buyer b, items that player already carries
+' are marked with * after the name and shown in yellow.
+' Can player p use item it at all? Weapons, ranged weapons, armor
+' and shields are limited by class in the module; ammunition,
+' rations, healing and magic are open to everyone.
+FUNCTION CanUse(p,it)
+  LOCAL j
+  IF itk$(it)="X" THEN
+    ' ammunition is only of use with a ranged weapon of its own
+    ' group that this player's class is allowed to carry
+    FOR j=1 TO nitm
+      IF itk$(j)="R" AND iv2(j)=iv2(it) THEN
+        IF INSTR(icl$(j),MID$("FWRH",pcl(p),1)) THEN CanUse=1: EXIT FUNCTION
+      ENDIF
+    NEXT
+    EXIT FUNCTION
+  ENDIF
+  IF INSTR("WRAS",itk$(it))=0 THEN CanUse=1: EXIT FUNCTION
+  CanUse=(INSTR(icl$(it),MID$("FWRH",pcl(p),1))>0)
+END FUNCTION
+' One page of the store list. Items are lettered A.. within the
+' page, so the letters restart on every page.
+SUB StoreScr n,b,pg
+  LOCAL i, j, it, c, t$, np2
+  np2=(n+SPG-1)\SPG
+  Clr 0: TopBar "GENERAL STORE        GOLD "+STR$(gold),0,YEL
+  FOR j=1 TO SPG
+    i=(pg-1)*SPG+j
+    IF i>n THEN EXIT FOR
+    it=sidx(i): c=WHT: t$=""
+    IF b>0 THEN
+      IF CanUse(b,it) THEN c=YEL ELSE c=GRY
+      IF Carries(b,it) THEN t$="*"
+    ENDIF
+    TxL 4,10+j*12,CHR$(64+j)+" "+LEFT$(itn$(it)+t$+SPACE$(21),21)+LEFT$(Info$(it)+SPACE$(7),7)+RIGHT$("    "+STR$(icost(it)),5),c,0
+  NEXT
+  IF np2>1 THEN TxL 4,166,"Page "+STR$(pg)+" of "+STR$(np2)+"    < > turn the page",CYN,0
+  IF b>0 THEN TxL 4,182,"yellow = usable by this player   * has",GRY,0
+  FOR i=1 TO np
+    IF i=b THEN TxL 80*(i-1),232,STR$(i)+" "+LEFT$(pn$(i),7),0,co(pco(i)) ELSE TxL 80*(i-1),232,STR$(i)+" "+LEFT$(pn$(i),7),co(pco(i)),0
+  NEXT
+  DrawLog
+END SUB
+' Does player p already carry item it? Weapons, armor and shields
+' must be the same item; ammunition counts if a matching weapon
+' has some loaded; healing counts if the player has any left.
+' Rations belong to the whole party, so they are never marked.
+FUNCTION Carries(p,it)
+  LOCAL j
+  SELECT CASE itk$(it)
+    CASE "W","R": Carries=(pw(p,0)=it OR pw(p,1)=it)
+    CASE "A": Carries=(par(p)=it)
+    CASE "S": Carries=(psh(p)=it)
+    CASE "H": Carries=(phl(p)>0)
+    CASE "X"
+      FOR j=0 TO 1
+        IF pw(p,j)>0 THEN
+          IF itk$(pw(p,j))="R" AND iv2(pw(p,j))=iv2(it) AND pam(p,j)>0 THEN Carries=1
+        ENDIF
+      NEXT
+    CASE "M"
+      FOR j=0 TO 9
+        IF pmi(p,j)=it THEN Carries=1
+      NEXT
+  END SELECT
+END FUNCTION
 SUB Store
-  LOCAL n, i, b, k, it
+  LOCAL n, i, b, k, it, pg, np2, last
   n=0
   FOR i=1 TO nitm
-    IF icost(i)>0 AND n<17 THEN n=n+1: sidx(n)=i
+    IF icost(i)>0 AND n<40 THEN n=n+1: sidx(n)=i
   NEXT
   IF n=0 THEN Msg "There is no store here.": EXIT SUB
+  pg=1: np2=(n+SPG-1)\SPG
   DO
-    Clr 0: TopBar "GENERAL STORE        GOLD "+STR$(gold),0,YEL
-    FOR i=1 TO n
-      it=sidx(i)
-      TxL 4,10+i*12,CHR$(64+i)+" "+LEFT$(itn$(it)+SPACE$(20),20)+LEFT$(Info$(it)+SPACE$(7),7)+RIGHT$("    "+STR$(icost(it)),5),WHT,0
-    NEXT
-    FOR i=1 TO np: TxL (i-1)*80,232,STR$(i)+" "+LEFT$(pn$(i),7),co(pco(i)),0: NEXT
-    DrawLog
-    Prompt "Buyer? (1-"+STR$(np)+", ESC=leave store)"
-    b=GetK()
-    IF b=KESC THEN EXIT SUB
-    b=b-48
-    IF b>=1 AND b<=np THEN
-      Prompt "Buy which (A-"+CHR$(64+n)+") for "+pn$(b)+"?"
-      k=GetK()-64
-      IF k>=1 AND k<=n THEN
-        it=sidx(k)
-        IF gold<icost(it) THEN
-          Msg "Not enough gold.": Sfx "no"
-        ELSEIF GiveItem(b,it,0) THEN
-          gold=gold-icost(it): ident(it)=1: Msg pn$(b)+" buys "+itn$(it): Sfx "buy"
-        ENDIF
-      ENDIF
+    StoreScr n,b,pg
+    last=MIN(SPG,n-(pg-1)*SPG)
+    IF b=0 THEN
+      Prompt "Buyer? 1-"+STR$(np)+"   < > page   ESC=leave store"
+    ELSE
+      Prompt "Buy A-"+CHR$(64+last)+" for "+LEFT$(pn$(b),8)+"  < > page  ESC"
     ENDIF
+    k=GetK()
+    SELECT CASE k
+      CASE KESC
+        IF b=0 THEN EXIT SUB
+        b=0
+      CASE KLF,44,60
+        pg=pg-1
+        IF pg<1 THEN pg=np2
+      CASE KRT,46,62
+        pg=pg+1
+        IF pg>np2 THEN pg=1
+      CASE 49 TO 48+np: b=k-48
+      CASE ELSE
+        IF b>0 THEN
+          k=k-64
+          IF k>=1 AND k<=last THEN
+            it=sidx((pg-1)*SPG+k)
+            IF gold<icost(it) THEN
+              Msg "Not enough gold.": Sfx "no"
+            ELSEIF GiveItem(b,it,0) THEN
+              gold=gold-icost(it): ident(it)=1: Msg pn$(b)+" buys "+itn$(it): Sfx "buy"
+            ENDIF
+          ENDIF
+        ENDIF
+    END SELECT
   LOOP
 END SUB
 
@@ -1031,7 +1192,10 @@ SUB PlayGame
       CASE 84: Trade
       CASE 79: Formation
       CASE 76: Listen
-      CASE 75: SaveGame
+      CASE 75
+        ' saving in a room would lose the monsters standing in it,
+        ' so it is only allowed out in the hallways
+        IF inrm THEN Msg "You can only save in a hallway." ELSE SaveGame
       CASE 62,46: Stairs 1
       CASE 60,44: Stairs -1
       CASE 63,72: HelpScr
@@ -1164,6 +1328,7 @@ END SUB
 SUB RoomEvents
   LOCAL mt, r
   mt=CG(px,py,BMO,5)
+  IF mt>0 THEN SetupFight 0,mt,CG(px,py,BMC,3)
   DrawRoomScr
   IF mt=0 THEN Sfx "door"
   IF mt>0 THEN
@@ -1369,9 +1534,12 @@ SUB PlaceMon i
 END SUB
 
 ' returns 1 won, 2 paid off, -1 party destroyed
-FUNCTION Combat(hall,mt,n)
-  LOCAL i, j, r
-  cmt=mt: nmc=MIN(8,MAX(1,n)): hallc=hall: negok=1
+' Give the monsters and the party their starting places. Done when
+' the party enters the room, before it is drawn, so the monsters are
+' never seen anywhere but where they stand.
+SUB SetupFight hall,mt,n
+  LOCAL j
+  cmt=mt: nmc=MIN(8,MAX(1,n)): hallc=hall
   IF hall THEN
     ay0=3: ay1=5: cfe=0
   ELSE
@@ -1380,6 +1548,16 @@ FUNCTION Combat(hall,mt,n)
   FOR j=1 TO 8: chp(j)=0: NEXT
   SetSlots hall
   FOR j=1 TO nmc: PlaceMon j: chp(j)=mhp(mt): NEXT
+  fset=1: fsf=fl: fsx=px: fsy=py
+END SUB
+' Are the monsters of the room we are standing in already placed?
+FUNCTION Placed()
+  Placed=(fset AND hallc=0 AND fsf=fl AND fsx=px AND fsy=py)
+END FUNCTION
+FUNCTION Combat(hall,mt,n)
+  LOCAL i, j, r
+  IF hall OR Placed()=0 OR cmt<>mt THEN SetupFight hall,mt,n
+  negok=1: scrv=0
   DO
     FOR i=1 TO np
       IF Alive(i) AND MonLeft()>0 THEN
@@ -1389,14 +1567,14 @@ FUNCTION Combat(hall,mt,n)
       ENDIF
     NEXT
     IF MonLeft()=0 THEN
-      DrawCombat 0: Msg "The "+mn$(mt)+" are defeated!": Sfx "victory": PAUSE 500
+      CombatView 0: Msg "The "+mn$(mt)+" are defeated!": Sfx "victory": PAUSE 500
       Combat=1: EXIT FUNCTION
     ENDIF
     FOR j=1 TO nmc
       IF chp(j)>0 AND PartyAlive()>0 THEN MTurn j
     NEXT
     IF PartyAlive()=0 THEN
-      DrawCombat 0: Msg "The party has been destroyed!": PAUSE 1200
+      CombatView 0: Msg "The party has been destroyed!": PAUSE 1200
       over=1: Combat=-1: EXIT FUNCTION
     ENDIF
   LOOP
@@ -1414,21 +1592,36 @@ SUB DrawCombat cur
   Panel cur,1
   TopBar STR$(MonLeft())+" "+UCASE$(mn$(cmt))+"   SPEED "+STR$(msp(cmt)),WHT,&H303030
   DrawLog
+  scrv=2: tbn=MonLeft()
+END SUB
+' Combat screen: drawn in full only if something else covered it;
+' otherwise only the side panel and top bar, and only if they changed.
+' (The message log is redrawn by Msg itself.)
+SUB CombatView cur
+  IF scrv<>2 THEN DrawCombat cur: EXIT SUB
+  PanelIf cur,1
+  IF MonLeft()<>tbn THEN
+    tbn=MonLeft()
+    TopBar STR$(tbn)+" "+UCASE$(mn$(cmt))+"   SPEED "+STR$(msp(cmt)),WHT,&H303030
+  ENDIF
 END SUB
 
 ' returns 0 normal, 2 paid off, 3 negotiation failed (round ends)
 FUNCTION PTurn(i)
-  LOCAL k, acts, d, gx, gy, o, t, r
+  LOCAL k, acts, d, gx, gy, o, t, r, tx0, ty0
   acts=2
   DO
-    DrawCombat i
+    CombatView i
     Prompt pn$(i)+": "+WName$(i,pcw(i))
     k=GetK()
     SELECT CASE k
       CASE KUP,KDN,KLF,KRT
         d=KDir(k): gx=cpx(i)+DX(d): gy=cpy(i)+DY(d): o=Occ(gx,gy)
         IF o>0 AND o<99 THEN Attack i,o,1: EXIT FUNCTION
-        IF o=0 AND acts=2 THEN cpx(i)=gx: cpy(i)=gy: acts=1
+        IF o=0 AND acts=2 THEN
+          tx0=cpx(i): ty0=cpy(i): cpx(i)=gx: cpy(i)=gy: acts=1
+          DrawTile tx0,ty0: DrawTile gx,gy
+        ENDIF
       CASE 70
         IF itk$(pw(i,pcw(i)))<>"R" THEN
           Msg "No ranged weapon ready (W switches)."
@@ -1472,7 +1665,8 @@ SUB DmgMon m,dmg,i
   chp(m)=chp(m)-dmg
   Msg pn$(i)+" hits "+mn$(cmt)+" for "+STR$(dmg)
   IF chp(m)<=0 THEN
-    chp(m)=0: Msg "The "+mn$(cmt)+" is eliminated!": Sfx "kill": GainXP i,mxp(cmt)
+    chp(m)=0: DrawTile cmx(m),cmy(m)
+    Msg "The "+mn$(cmt)+" is eliminated!": Sfx "kill": GainXP i,mxp(cmt)
   ELSE
     Sfx "hit"
   ENDIF
@@ -1484,26 +1678,28 @@ FUNCTION Target(i)
   FOR j=nmc TO 1 STEP -1
     IF chp(j)>0 THEN gx=cmx(j): gy=cmy(j)
   NEXT
+  CombatView i
   DO
-    DrawCombat i
     Bo OX+gx*TS,OY+gy*TS,TS,TS,YEL
-    Prompt "Aim with arrows, SPACE=fire, ESC=cancel"
+    Prompt "Aim, SPACE=fire, ESC=cancel"
     k=GetK()
     IF k>=KUP AND k<=KRT THEN
       d=KDir(k)
-      IF gx+DX(d)>=0 AND gx+DX(d)<=8 AND gy+DY(d)>=ay0 AND gy+DY(d)<=ay1 THEN gx=gx+DX(d): gy=gy+DY(d)
+      IF gx+DX(d)>=0 AND gx+DX(d)<=8 AND gy+DY(d)>=ay0 AND gy+DY(d)<=ay1 THEN
+        DrawTile gx,gy: gx=gx+DX(d): gy=gy+DY(d)
+      ENDIF
     ELSEIF k=32 OR k=KEN THEN
       j=Occ(gx,gy)
-      IF j>0 AND j<99 THEN Target=j: EXIT FUNCTION
+      IF j>0 AND j<99 THEN DrawTile gx,gy: Target=j: EXIT FUNCTION
       Msg "There is no monster there."
     ELSEIF k=KESC THEN
-      EXIT FUNCTION
+      DrawTile gx,gy: EXIT FUNCTION
     ENDIF
   LOOP
 END FUNCTION
 
 SUB MTurn j
-  LOCAL s, t, i, dd, bd, sx, sy
+  LOCAL s, t, i, dd, bd, sx, sy, tx0, ty0
   FOR s=1 TO msp(cmt)
     FOR i=1 TO np
       IF Alive(i) AND ABS(cpx(i)-cmx(j))+ABS(cpy(i)-cmy(j))=1 THEN MAttack i: EXIT SUB
@@ -1518,11 +1714,13 @@ SUB MTurn j
     NEXT
     IF t=0 THEN EXIT SUB
     sx=SGN(cpx(t)-cmx(j)): sy=SGN(cpy(t)-cmy(j))
+    tx0=cmx(j): ty0=cmy(j)
     IF sx<>0 AND Occ(cmx(j)+sx,cmy(j))=0 THEN
       cmx(j)=cmx(j)+sx
     ELSEIF sy<>0 AND Occ(cmx(j),cmy(j)+sy)=0 THEN
       cmy(j)=cmy(j)+sy
     ENDIF
+    IF cmx(j)<>tx0 OR cmy(j)<>ty0 THEN DrawTile tx0,ty0: DrawTile cmx(j),cmy(j)
   NEXT
 END SUB
 
@@ -1542,6 +1740,7 @@ SUB MAttack t
     Msg mn$(cmt)+" hits "+pn$(t)+" for "+STR$(dmg)
     IF pwd(t)+dmg<php(t) THEN Sfx "mhit"
     Wound t,dmg
+    IF scrv=2 THEN PanelIf 0,1
   ELSE
     Msg mn$(cmt)+" misses "+pn$(t)+".": Sfx "mmiss"
   ENDIF
@@ -1638,6 +1837,37 @@ FUNCTION LoadGame()
 END FUNCTION
 
 '===================== title / setup / end =========================
+' Title melody: the opening of the Swan theme from Tchaikovsky's
+' Swan Lake (B minor, 4/4). Notes are "frequency/length", length in
+' eighth notes: G4=392 B4=494 C#5=554 D5=587 E5=659 F#5=740 Hz.
+' TBEAT sets the tempo (ms per quarter note). The keyboard is checked
+' all the way through;
+' N, C or Q stops the tune at once and is returned as the choice.
+' Any other key is ignored. Returns 0 if the tune played to the end.
+FUNCTION TitleTune()
+  LOCAL i, f, ms, t0, k, n$, m$, t$
+  m$="740/4,494/1,554/1,587/1,659/1,"
+  m$=m$+"740/3,587/1,740/3,587/1,"
+  m$=m$+"740/3,494/1,587/1,494/1,392/1,587/1,"
+  m$=m$+"494/8"
+  i=1
+  DO
+    n$=FIELD$(m$,i,",")
+    IF n$="" THEN EXIT DO
+    f=VAL(n$): ms=VAL(FIELD$(n$,2,"/"))*TBEAT\2
+    PLAY TONE f,f,ms
+    t0=TIMER
+    DO
+      t$=INKEY$
+      IF t$<>"" THEN
+        k=ASC(UCASE$(t$))
+        IF k=78 OR k=67 OR k=81 THEN PLAY STOP: TitleTune=k: EXIT FUNCTION
+      ENDIF
+    LOOP UNTIL TIMER-t0>=ms
+    i=i+1
+  LOOP
+  PLAY STOP
+END FUNCTION
 SUB TitleScr
   LOCAL k, i, tune
   DO
@@ -1650,8 +1880,9 @@ SUB TitleScr
     TxA 160,8,"A PicoMite adventure","CT",1,GRY,0
     TxA 160,262,"N - New quest    C - Continue saved","CT",1,WHT,0
     TxA 160,280,"Q - Quit","CT",1,WHT,0
-    IF tune=0 THEN Sfx "title": tune=1
-    k=GetK()
+    k=0
+    IF tune=0 THEN k=TitleTune(): tune=1
+    IF k=0 THEN k=GetK()
     IF k=78 THEN
       IF NewGame() THEN EXIT SUB
     ELSEIF k=67 THEN
