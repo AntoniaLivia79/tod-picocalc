@@ -1,6 +1,6 @@
 '=====================================================================
 ' TUNNELS OF DOOM - PicoMite / PicoCalc port (320x320 LCD)
-' Based on Kevin Kenney's 1982 TI-99/4A classic.
+' Simplified re-imagining of Kevin Kenney's 1982 TI-99/4A classic.
 ' Needs PARTY.DAT (made by PARTY.BAS) and an adventure module (*.ADV)
 '=====================================================================
 CLEAR                     ' drop any variables left by a previous run
@@ -1259,7 +1259,7 @@ SUB Store
     StoreScr n,b,pg
     last=MIN(SPG,n-(pg-1)*SPG)
     IF b=0 THEN
-      Prompt "Buyer? 1-"+STR$(np)+"   < > page   ESC=leave store"
+      Prompt "Buyer? 1-"+STR$(np)+"   ESC=leave store"
     ELSE
       Prompt "Buy A-"+CHR$(64+last)+" for "+LEFT$(pn$(b),8)+"  < > page  ESC"
     ENDIF
@@ -1274,7 +1274,9 @@ SUB Store
       CASE KRT,46,62
         pg=pg+1
         IF pg>np2 THEN pg=1
-      CASE 49 TO 48+np: b=k-48
+      CASE 49 TO 48+np
+        ' a new buyer starts at the first page again
+        b=k-48: pg=1
       CASE ELSE
         IF b>0 THEN
           k=k-64
