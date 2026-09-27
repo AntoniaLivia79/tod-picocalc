@@ -35,9 +35,8 @@ ITEM,W,Short Sword,6,0,18,FRH,
 ITEM,W,Long Sword,9,0,60,FH,
 ITEM,W,Mace,7,0,32,FRH,
 ITEM,W,Staff,5,0,12,FWRH,
-ITEM,R,Sling,4,1,10,FWRH,
+ITEM,R,Sling,4,0,10,FWRH,
 ITEM,R,Short Bow,6,2,35,FRH,
-ITEM,X,Sling Stones,20,1,3,,
 ITEM,X,Arrows,20,2,20,,
 ITEM,A,Leather Armor,1,0,15,FRH,
 ITEM,A,Chain Mail,3,0,70,FH,
@@ -105,7 +104,7 @@ MON,Greater Demon,X,&HD00000,55,15,10,18,1,220,10,10,2,0,0,a deep bellow
 MON,Werdna,Z,&H8020FF,70,16,11,20,2,400,11,11,1,1,0,slow patient breathing
 
 # ------------------------------------------------------------ quest objects
-# The keys are gathered on the way down; the amulet is the main goal.
+# The keys open the way down; the amulet is the point of it all.
 QUEST,Bronze Key,4,0
 QUEST,Silver Key,7,0
 QUEST,Gold Key,9,0

@@ -1,6 +1,6 @@
 '=====================================================================
 ' TUNNELS OF DOOM - PicoMite / PicoCalc port (320x320 LCD)
-' Simplified re-imagining of Kevin Kenney's 1982 TI-99/4A classic.
+' Based on Kevin Kenney's 1982 TI-99/4A classic.
 ' Needs PARTY.DAT (made by PARTY.BAS) and an adventure module (*.ADV)
 '=====================================================================
 CLEAR                     ' drop any variables left by a previous run
@@ -60,6 +60,8 @@ DIM scrv, vf, vx, vy, vd, vsig, pnsig, tbn
 ' fset=1 once the monsters of the room at fsf/fsx/fsy have been given
 ' their starting positions, so the room view can show them there.
 DIM fset, fsf, fsx, fsy
+' player figures: packed rectangles, one list per class
+DIM fig(4,48), fgn(4)
 
 DX(1)=1: DX(3)=-1: DY(0)=-1: DY(2)=1
 ins(1)=46: ins(2)=82: ins(3)=106: ins(4)=121: ins(5)=130
@@ -67,6 +69,7 @@ co(1)=&H2040FF: co(2)=&HE000E0: co(3)=&H00B000: co(4)=&HE00000
 cln$(1)="Fighter": cln$(2)="Wizard": cln$(3)="Rogue": cln$(4)="Hero"
 FONT 1
 RANDOMIZE TIMER
+FigInit
 DO
   TitleScr
   PlayGame
@@ -685,11 +688,46 @@ SUB SwapP a,b
 END SUB
 
 '===================== drawing =====================================
-SUB DrawFig x,y,c
-  Ci x+12,y+5,4,c,c
-  Bx x+9,y+9,7,8,c,c
-  Ln x+10,y+17,x+8,y+22,c: Ln x+14,y+17,x+16,y+22,c
-  Ln x+17,y+12,x+21,y+3,c
+' The four class figures are 16x20 bitmaps, stored as a list of
+' filled rectangles (see the DATA at the end of the program). Each
+' rectangle packs as ((((x*32+y)*32+w)*32+h)*8+colour), where colour
+' 1 means "the player's own colour" and the rest are fixed.
+SUB FigInit
+  LOCAL a$, b$, cl, i, v
+  RESTORE FigArt
+  DO
+    READ a$
+    IF a$="END" THEN EXIT DO
+    cl=VAL(LEFT$(a$,1)): b$=MID$(a$,3)
+    i=1
+    DO
+      v=VAL(FIELD$(b$,i,","))
+      IF v=0 THEN EXIT DO
+      IF fgn(cl)<48 THEN fgn(cl)=fgn(cl)+1: fig(cl,fgn(cl))=v
+      i=i+1
+    LOOP
+  LOOP
+END SUB
+' Draw player p as their class figure, in the player's colour.
+SUB DrawPl x,y,p
+  DrawCls x,y,pcl(p),co(pco(p))
+END SUB
+' Draw the figure of class cl in colour pc (used by the title too).
+SUB DrawCls x,y,cl,pc
+  LOCAL i, v, c
+  FOR i=1 TO fgn(cl)
+    v=fig(cl,i)
+    SELECT CASE v AND 7
+      CASE 1: c=pc
+      CASE 2: c=WHT
+      CASE 3: c=YEL
+      CASE 4: c=&HE00000
+      CASE 5: c=&H906030
+      CASE 6: c=CYN
+      CASE ELSE: c=0
+    END SELECT
+    Bx x+4+((v>>18) AND 31),y+2+((v>>13) AND 31),(v>>8) AND 31,(v>>3) AND 31,c,c
+  NEXT
 END SUB
 SUB DrawMon c,r,mt
   LOCAL x, y
@@ -819,6 +857,37 @@ SUB DrawObj c,r
   IF c=2 AND r=2 AND CG(px,py,BQS,4) THEN TxA x,y-8,"*","CT",2,&HFF8000,fc
   IF c=6 AND r=6 AND CG(px,py,BMP,1) THEN Bx x-8,y-6,16,12,0,&HF0E0A0
 END SUB
+' Fly a missile from tile c1,r1 to tile c2,r2 across the arena.
+' kind 0 = sling stone, 1 = arrow or quarrel, 2 = a monster's shot.
+' The missile is rubbed out with floor colour as it goes, then the
+' tiles it crossed are repainted so nothing it flew over is lost.
+SUB Missile c1,r1,c2,r2,kind
+  LOCAL x1, y1, x2, y2, dx, dy, d, n, i, mx, my, mc, mr
+  IF scrv<>2 THEN EXIT SUB
+  x1=OX+c1*TS+12: y1=OY+r1*TS+12
+  x2=OX+c2*TS+12: y2=OY+r2*TS+12
+  dx=x2-x1: dy=y2-y1: d=MAX(ABS(dx),ABS(dy))
+  IF d<1 THEN EXIT SUB
+  n=MAX(2,d\6)
+  FOR i=1 TO n
+    mx=x1+dx*i\n: my=y1+dy*i\n
+    SELECT CASE kind
+      CASE 0: Ci mx,my,3,&HD0D0D0,&HD0D0D0
+      CASE 1
+        Ln mx-dx*6\d,my-dy*6\d,mx,my,&HE0C070
+        Ci mx,my,1,WHT,WHT
+      CASE ELSE
+        Ln mx-dx*6\d,my-dy*6\d,mx,my,&HFF6000
+    END SELECT
+    PAUSE 12
+    ' rub the missile out by repainting every tile it touched
+    FOR mr=(my-6-OY)\TS TO (my+6-OY)\TS
+      FOR mc=(mx-6-OX)\TS TO (mx+6-OX)\TS
+        IF mc>=0 AND mc<=8 AND mr>=ay0 AND mr<=ay1 THEN DrawTile mc,mr
+      NEXT
+    NEXT
+  NEXT
+END SUB
 ' Repaint one combat tile: floor, room object, then who stands on it.
 SUB DrawTile c,r
   LOCAL x, y, j, fc
@@ -830,7 +899,7 @@ SUB DrawTile c,r
     IF chp(j)>0 AND cmx(j)=c AND cmy(j)=r THEN DrawMon c,r,cmt
   NEXT
   FOR j=1 TO np
-    IF Alive(j) AND cpx(j)=c AND cpy(j)=r THEN DrawFig x,y,co(pco(j))
+    IF Alive(j) AND cpx(j)=c AND cpy(j)=r THEN DrawPl x,y,j
   NEXT
 END SUB
 
@@ -857,7 +926,7 @@ SUB Panel cur,cmb
   FOR i=1 TO np
     y=OY+(i-1)*55: c=co(pco(i))
     IF cur=i THEN TxL PANX,y,STR$(i)+" "+LEFT$(pn$(i),8),0,c ELSE TxL PANX,y,STR$(i)+" "+LEFT$(pn$(i),8),c,0
-    IF Alive(i) THEN DrawFig PANX,y+12,c ELSE TxL PANX+4,y+20,"--",GRY,0
+    IF Alive(i) THEN DrawPl PANX,y+12,i ELSE TxL PANX+4,y+20,"--",GRY,0
     TxL PANX+26,y+14,"HP "+STR$(php(i)),WHT,0
     TxL PANX+26,y+26,"WD "+STR$(pwd(i)),WHT,0
     IF cmb AND Alive(i) THEN TxL PANX+26,y+38,Ind$(i),YEL,0
@@ -876,7 +945,7 @@ SUB DrawRoomScr
   ENDIF
   SetSlots 0
   FOR i=1 TO np
-    IF Alive(i) THEN DrawFig OX+cpx(i)*TS,OY+cpy(i)*TS,co(pco(i))
+    IF Alive(i) THEN DrawPl OX+cpx(i)*TS,OY+cpy(i)*TS,i
   NEXT
   Panel 0,0
   TopBar "FLOOR "+STR$(fl)+"  ROOM  GOLD "+STR$(gold),WHT,&H303030
@@ -962,9 +1031,53 @@ FUNCTION WName$(i,j)
   w=pw(i,j)
   IF w=0 THEN WName$="Hands": EXIT FUNCTION
   WName$=itn$(w)
-  IF itk$(w)="R" THEN WName$=WName$+" ("+STR$(pam(i,j))+")"
+  IF itk$(w)="R" AND iv2(w)>0 THEN WName$=WName$+" ("+STR$(pam(i,j))+")"
 END FUNCTION
 
+' What an identified magic item does, in a line that fits the screen.
+FUNCTION MDesc$(it)
+  LOCAL pw2
+  pw2=MAX(1,iv2(it))
+  SELECT CASE iv1(it)
+    CASE 1: MDesc$="heals up to "+STR$(pw2)+" wounds"
+    CASE 2: MDesc$="cursed: "+STR$(pw2)+" wounds to the user"
+    CASE 3: MDesc$="flame: up to "+STR$(pw2)+" damage to all foes"
+    CASE 4: MDesc$="bolt: "+STR$(pw2)+" to "+STR$(pw2*2)+" damage, one foe"
+    CASE 5: MDesc$="reveals the map of this floor"
+    CASE 6: MDesc$="adds "+STR$(pw2)+" hit points for good"
+    CASE 7: MDesc$="adds "+STR$(pw2)+" to the bonus for good"
+    CASE ELSE: MDesc$="nothing anyone understands"
+  END SELECT
+END FUNCTION
+' The magic items player i is carrying that have been identified.
+' Unknown items are only counted: their secret keeps until used,
+' bought or named by a living statue.
+SUB MagicRpt i
+  LOCAL j, k, it, n, unk
+  Clr 0: TopBar "MAGIC ITEMS  "+LEFT$(pn$(i),12),0,YEL
+  ry=24
+  FOR j=0 TO 9
+    it=pmi(i,j)
+    IF it>0 THEN
+      IF ident(it) THEN
+        n=n+1
+        RL itn$(it),YEL
+        RL "   "+MDesc$(it),WHT
+        IF INSTR(icl$(it),MID$("FWRH",pcl(i),1))=0 THEN RL "   "+pn$(i)+" cannot use it",GRY
+      ELSE
+        unk=unk+1
+      ENDIF
+    ENDIF
+  NEXT
+  IF n=0 THEN RL "Nothing identified yet.",GRY
+  IF unk>0 THEN
+    ry=ry+6
+    RL STR$(unk)+" unknown item(s) not listed here.",CYN
+    RL "Use one, or pay a statue to name it.",CYN
+  ENDIF
+  Prompt "Press any key"
+  k=GetK()
+END SUB
 SUB PlayerRpt
   LOCAL i, j, k, n
   i=1
@@ -986,12 +1099,14 @@ SUB PlayerRpt
     FOR j=0 TO 9
       IF pmi(i,j) THEN RL "  "+IName$(pmi(i,j)),WHT
     NEXT
-    Prompt "UP/DOWN=other player  any key=back"
+    Prompt "UP/DOWN=player  M=magic  any key=back"
     k=GetK()
     IF k=KUP THEN
       i=i+1: IF i>np THEN i=1
     ELSEIF k=KDN THEN
       i=i-1: IF i<1 THEN i=np
+    ELSEIF k=77 OR k=109 THEN
+      MagicRpt i
     ELSE
       EXIT SUB
     ENDIF
@@ -1587,7 +1702,7 @@ SUB DrawCombat cur
     IF chp(j)>0 THEN DrawMon cmx(j),cmy(j),cmt
   NEXT
   FOR i=1 TO np
-    IF Alive(i) THEN DrawFig OX+cpx(i)*TS,OY+cpy(i)*TS,co(pco(i))
+    IF Alive(i) THEN DrawPl OX+cpx(i)*TS,OY+cpy(i)*TS,i
   NEXT
   Panel cur,1
   TopBar STR$(MonLeft())+" "+UCASE$(mn$(cmt))+"   SPEED "+STR$(msp(cmt)),WHT,&H303030
@@ -1625,11 +1740,17 @@ FUNCTION PTurn(i)
       CASE 70
         IF itk$(pw(i,pcw(i)))<>"R" THEN
           Msg "No ranged weapon ready (W switches)."
-        ELSEIF pam(i,pcw(i))<=0 THEN
+        ELSEIF iv2(pw(i,pcw(i)))>0 AND pam(i,pcw(i))<=0 THEN
           Msg "Out of ammunition!"
         ELSE
           t=Target(i)
-          IF t>0 THEN pam(i,pcw(i))=pam(i,pcw(i))-1: Sfx "fire": Attack i,t,0: EXIT FUNCTION
+          IF t>0 THEN
+            ' ammo group 0 means the weapon needs none (a sling)
+            IF iv2(pw(i,pcw(i)))>0 THEN pam(i,pcw(i))=pam(i,pcw(i))-1
+            Sfx "fire"
+            Missile cpx(i),cpy(i),cmx(t),cmy(t),MIN(1,iv2(pw(i,pcw(i))))
+            Attack i,t,0: EXIT FUNCTION
+          ENDIF
         ENDIF
       CASE 87
         pcw(i)=1-pcw(i): acts=acts-1: Msg pn$(i)+" readies "+WName$(i,pcw(i))
@@ -1704,7 +1825,13 @@ SUB MTurn j
     FOR i=1 TO np
       IF Alive(i) AND ABS(cpx(i)-cmx(j))+ABS(cpy(i)-cmy(j))=1 THEN MAttack i: EXIT SUB
     NEXT
-    IF mrg(cmt) AND RND<.5 THEN MAttack RndAlive(): EXIT SUB
+    IF mrg(cmt) AND RND<.5 THEN
+      t=RndAlive()
+      IF t>0 THEN
+        Sfx "fire": Missile cmx(j),cmy(j),cpx(t),cpy(t),2
+      ENDIF
+      MAttack t: EXIT SUB
+    ENDIF
     t=0: bd=99
     FOR i=1 TO np
       IF Alive(i) THEN
@@ -1872,14 +1999,12 @@ SUB TitleScr
   LOCAL k, i, tune
   DO
     Clr 0
-    Bo 10,40,300,200,&H2040FF: Bo 56,70,208,139,&H2040FF
-    Ln 10,40,56,70,&H2040FF: Ln 309,40,263,70,&H2040FF
-    Ln 10,239,56,208,&H2040FF: Ln 309,239,263,208,&H2040FF
     TxA 160,108,"TUNNELS","CT",3,YEL,0
     TxA 160,146,"OF DOOM","CT",3,YEL,0
     TxA 160,8,"A PicoMite adventure","CT",1,GRY,0
     TxA 160,262,"N - New quest    C - Continue saved","CT",1,WHT,0
     TxA 160,280,"Q - Quit","CT",1,WHT,0
+    FOR i=1 TO 4: DrawCls 76+(i-1)*48,182,i,co(i): NEXT
     k=0
     IF tune=0 THEN k=TitleTune(): tune=1
     IF k=0 THEN k=GetK()
@@ -1955,3 +2080,15 @@ SUB EndScr
   k=GetK()
   PLAY STOP
 END SUB
+
+'===================== player figure bitmaps ========================
+FigArt:
+DATA "1:1311240,1835532,2359816,1057040,1320467,2892296,2900272,3162434,3424576,1335584,1598482,2646304,1614859,574216,1623048,319784,582411,1369633,590115,852249,1114403,2949393,2966283,3752200,"
+DATA "1:876811,1402379,2974472,623368,1410569,2982200,1155376,1417769,1942056,2466345,1458696,2507272,"
+DATA "2:1573128,1835569,2359560,3146504,1319176,1581353,2367785,2630152,3154710,3940624,1065224,1327393,2638113,2900232,811272,1073433,2908441,3170568,3432837,3694976,557328,819473,3178769,836360,"
+DATA "2:1623058,2671376,1106440,852272,1116241,3211528,3219729,3236120,639264,901409,3260705,936456,3563784,"
+DATA "3:1312264,1057064,1320473,2892072,1344009,1868306,2392585,827656,1351945,1614090,2400522,2662665,573752,836153,1361416,1369649,2941448,2949392,3211554,3473696,2965777,2982667,3768584,893448,"
+DATA "3:1417769,1942056,2466345,2990856,1163560,2998568,1458696,2507272,"
+DATA "4:1050632,794888,1057034,1320467,2892042,3154440,1065224,2900488,3424578,3686720,1335584,1598482,2646304,3170576,2916616,1614859,2925100,574216,1623048,319784,582411,1369633,590115,852252,"
+DATA "4:1114403,2965812,3228427,4014344,876811,1402379,3236140,3498504,623368,1410569,3506464,1155376,1417769,1942056,2466345,3015176,3023120,1458696,2507272,"
+DATA "END"

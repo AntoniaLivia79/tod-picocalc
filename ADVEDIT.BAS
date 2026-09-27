@@ -169,7 +169,7 @@ FUNCTION EdSpec$(k$)
     CASE "KIT": EdSpec$="Classes FWRH:T|Item name:T"
     CASE "QUEST": EdSpec$="Name:T|Floor:N|Countdown 0=ofs:N"
     CASE "ITEM"
-      EdSpec$="Kind WRXASPHM:T|Name:T|Value 1:N|Value 2:N|Cost 0=not sold:N|Classes FWRH:T|Unknown name:T"
+      EdSpec$="Kind WRXASPHM:T|Name:T|Value 1:N|Ammo grp 0=none:N|Cost 0=not sold:N|Classes FWRH:T|Unknown name:T"
     CASE "MON"
       EdSpec$="Name:T|Glyph:T|Colour &HRRGGBB:N|Hit points:N|Attack:N|Defense:N|Damage:N|Speed:N|XP:N|Min floor:N|Max floor:N|Max group 1-7:N|Ranged 0/1:N|Negotiate %:N|Sound:T"
     CASE ELSE: EdSpec$=""
@@ -481,7 +481,7 @@ SUB EdCheck
         CASE "ITEM"
           nit=nit+1
           IF INSTR("WRXASPHM",UCASE$(LEFT$(EdFld$(ln$(i),2)+"?",1)))=0 THEN EdAddV "L"+EdNS$(i)+": item kind must be W R X A S P H M"
-          IF UCASE$(EdFld$(ln$(i),2))="R" THEN
+          IF UCASE$(EdFld$(ln$(i),2))="R" AND VAL(EdFld$(ln$(i),5))>0 THEN
             ok=0
             FOR j=1 TO nl
               IF EdKw$(ln$(j))="ITEM" AND UCASE$(EdFld$(ln$(j),2))="X" AND VAL(EdFld$(ln$(j),5))=VAL(EdFld$(ln$(i),5)) THEN ok=1

@@ -43,7 +43,8 @@ Hallways: UP walks forward,
 >  or .   go down stairs
 <  or ,   go up stairs
 M         floor map
-1         player report
+1         player report (then M for
+          magic item details)
 2         party report
 U         use magic item
 T         trade or drop magic item
@@ -64,6 +65,8 @@ whose turn it is.
 
 Arrow     step, or hit adjacent foe
 F         fire ranged weapon; aim
+          (a sling never runs out)
+          You see the shot fly.
           with arrow keys, SPACE fires
 W         switch weapon
 N         negotiate: Y pay,

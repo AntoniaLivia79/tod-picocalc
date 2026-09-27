@@ -9,6 +9,7 @@ CONST WHT=&HFFFFFF, YEL=&HFFFF00, CYN=&H00FFFF, GRY=&H909090
 
 DIM np, i, k, ry, used(4)
 DIM pcl(4), pco(4), php(4), pbn(4), co(4)
+DIM fig(4,48), fgn(4)
 DIM pn$(4) LENGTH 12
 DIM cln$(4) LENGTH 8
 DIM coln$(4) LENGTH 8
@@ -17,6 +18,7 @@ cln$(1)="Fighter": cln$(2)="Wizard": cln$(3)="Rogue": cln$(4)="Hero"
 coln$(1)="Blue": coln$(2)="Magenta": coln$(3)="Green": coln$(4)="Red"
 FONT 1
 RANDOMIZE TIMER
+FigInit
 SndSeq "262/90,330/90,392/90,523/220"
 
 DO
@@ -110,7 +112,7 @@ SUB ShowParty
   Header "YOUR PARTY"
   FOR n=1 TO np
     y=ry
-    DrawFig 10,y,co(pco(n))
+    DrawCls 10,y,pcl(n),co(pco(n))
     TEXT 44,y,STR$(n)+". "+pn$(n),"LT",1,1,co(pco(n)),0
     TEXT 44,y+13,cln$(pcl(n))+"  HP "+STR$(php(n))+"  Bonus "+STR$(pbn(n)),"LT",1,1,WHT,0
     ry=ry+36
@@ -121,11 +123,42 @@ SUB ShowParty
   RL "ESC    start over",CYN
 END SUB
 
-SUB DrawFig x,y,c
-  CIRCLE x+12,y+5,4,1,1,c,c
-  BOX x+9,y+9,7,8,1,c,c
-  LINE x+10,y+17,x+8,y+22,1,c: LINE x+14,y+17,x+16,y+22,1,c
-  LINE x+17,y+12,x+21,y+3,1,c
+' The four class figures are 16x20 bitmaps, stored as a list of
+' filled rectangles (see the DATA at the end of the program). Each
+' rectangle packs as ((((x*32+y)*32+w)*32+h)*8+colour), where colour
+' 1 means "the player's own colour" and the rest are fixed.
+SUB FigInit
+  LOCAL a$, b$, cl, i, v
+  RESTORE FigArt
+  DO
+    READ a$
+    IF a$="END" THEN EXIT DO
+    cl=VAL(LEFT$(a$,1)): b$=MID$(a$,3)
+    i=1
+    DO
+      v=VAL(FIELD$(b$,i,","))
+      IF v=0 THEN EXIT DO
+      IF fgn(cl)<48 THEN fgn(cl)=fgn(cl)+1: fig(cl,fgn(cl))=v
+      i=i+1
+    LOOP
+  LOOP
+END SUB
+' Draw the figure of class cl in colour pc (used by the title too).
+SUB DrawCls x,y,cl,pc
+  LOCAL i, v, c
+  FOR i=1 TO fgn(cl)
+    v=fig(cl,i)
+    SELECT CASE v AND 7
+      CASE 1: c=pc
+      CASE 2: c=WHT
+      CASE 3: c=YEL
+      CASE 4: c=&HE00000
+      CASE 5: c=&H906030
+      CASE 6: c=CYN
+      CASE ELSE: c=0
+    END SELECT
+    BOX x+4+((v>>18) AND 31),y+2+((v>>13) AND 31),(v>>8) AND 31,(v>>3) AND 31,1,c,c
+  NEXT
 END SUB
 
 SUB Header s$
@@ -177,3 +210,15 @@ SUB SndSeq s$
     i=i+1
   LOOP
 END SUB
+
+'===================== player figure bitmaps ========================
+FigArt:
+DATA "1:1311240,1835532,2359816,1057040,1320467,2892296,2900272,3162434,3424576,1335584,1598482,2646304,1614859,574216,1623048,319784,582411,1369633,590115,852249,1114403,2949393,2966283,3752200,"
+DATA "1:876811,1402379,2974472,623368,1410569,2982200,1155376,1417769,1942056,2466345,1458696,2507272,"
+DATA "2:1573128,1835569,2359560,3146504,1319176,1581353,2367785,2630152,3154710,3940624,1065224,1327393,2638113,2900232,811272,1073433,2908441,3170568,3432837,3694976,557328,819473,3178769,836360,"
+DATA "2:1623058,2671376,1106440,852272,1116241,3211528,3219729,3236120,639264,901409,3260705,936456,3563784,"
+DATA "3:1312264,1057064,1320473,2892072,1344009,1868306,2392585,827656,1351945,1614090,2400522,2662665,573752,836153,1361416,1369649,2941448,2949392,3211554,3473696,2965777,2982667,3768584,893448,"
+DATA "3:1417769,1942056,2466345,2990856,1163560,2998568,1458696,2507272,"
+DATA "4:1050632,794888,1057034,1320467,2892042,3154440,1065224,2900488,3424578,3686720,1335584,1598482,2646304,3170576,2916616,1614859,2925100,574216,1623048,319784,582411,1369633,590115,852252,"
+DATA "4:1114403,2965812,3228427,4014344,876811,1402379,3236140,3498504,623368,1410569,3506464,1155376,1417769,1942056,2466345,3015176,3023120,1458696,2507272,"
+DATA "END"

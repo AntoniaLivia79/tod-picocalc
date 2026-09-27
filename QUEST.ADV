@@ -36,10 +36,9 @@ ITEM,W,Hand Axe,6,0,15,FRH
 ITEM,W,Mace,7,0,25,FRH
 ITEM,W,Sword,8,0,40,FRH
 ITEM,W,Two-Hand Sword,11,0,0,FH
-ITEM,R,Sling,4,1,10,FWRH
+ITEM,R,Sling,4,0,10,FWRH
 ITEM,R,Short Bow,6,2,30,FRH
 ITEM,R,Crossbow,9,3,50,FRH
-ITEM,X,Stones,20,1,2,FWRH
 ITEM,X,Arrows,20,2,20,FRH
 ITEM,X,Quarrels,10,3,20,FRH
 ITEM,A,Leather Armor,1,0,15,FRH
@@ -69,7 +68,6 @@ KIT,R,Arrows
 KIT,R,Arrows
 KIT,W,Dagger
 KIT,W,Sling
-KIT,W,Stones
 KIT,W,Fireball Scroll
 KIT,H,Sword
 KIT,H,Fireball Scroll

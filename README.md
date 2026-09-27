@@ -1,37 +1,37 @@
 # Tunnels of Doom — PicoMite / PicoCalc edition
 
-A much simplified port of Kevin Kenney's 1982 TI-99/4A dungeon adventure, written in PicoMite (MMBasic) BASIC for the PicoCalc and its 320×320 LCD.
+A simplified port of Kevin Kenney's 1982 TI-99/4A dungeon adventure, written in PicoMite (MMBasic) BASIC for the PicoCalc and its 320×320 LCD.
 
-| File           | Purpose                                                                       |
-|----------------|-------------------------------------------------------------------------------|
-| `TOD.BAS`      | The game                                                                      |
-| `PARTY.BAS`    | The Party creator — writes `PARTY.DAT` (run first)                            |
-| `QUEST.ADV`    | "Quest of the King", the classic adventure (4 floors, monsters, time limits)  |
-| `MORIA.ADV`    | "Moria", a Tolkien themed adventure (6 floors, monsters, no time limits)      |
-| `WIZARDRY.ADV` | "Wizardry", a Wizardry themed adventure (10 floors, monsters, no time limits) |
-| `ADVEDIT.BAS`  | Adventure editor — edit `.ADV` modules on the PicoCalc                        |
-| `PENNIES.ADV`  | "Pennies and Prizes", a gentle adventure (no monsters)                        |
-| `screens/`     | Screenshots rendered from the game's drawing commands                         |
+| File           | Purpose                                                                      |
+|----------------|------------------------------------------------------------------------------|
+| `TOD.BAS`      | The game                                                                     |
+| `PARTY.BAS`    | Party creator — writes `PARTY.DAT`                                           |
+| `QUEST.ADV`    | "Quest of the King", the classic adventure (4 floors, monsters, time limits) |
+| `PENNIES.ADV`  | "Pennies and Prizes", a gentle adventure (no monsters)                       |
+| `MORIA.ADV`    | "Mines of Moria", a Tolkien themed adventure                                 |
+| `WIZARDRY.ADV` | "Wizardry", an adventure inspired by the first Wizardry PC game              |
+| `ADVEDIT.BAS`  | Adventure editor — edit `.ADV` modules on the PicoCalc                       |
+
+This game has been tested on a PicoCalc using a RP2350 Pico 2 board. I do not know if it would run in any other environment.
 
 ---
 
 ## 1. Introduction
 
-Tunnels of Doom is a party-based dungeon crawl. You lead up to four adventurers down through multi-level dungeons, exploring hallways in a first-person view and fighting in an overhead room view. Your goal is set by the adventure module you load: in *Quest of the King* you must rescue the King and recover his Rainbow Orb before time runs out, then return to the surface.
+Tunnels of Doom is a party-based dungeon crawl. You lead up to four adventurers down through a multi-level dungeon, exploring hallways in a first-person view and fighting in an overhead room view. Your goal is set by the adventure module you load: in *Quest of the King* you must rescue the King and recover his Rainbow Orb before time runs out, then return to the surface.
 
 ![Title screen](screens/1_title.png)
 
-The game features:
+Along the way you will find:
 
 - **Hallways** drawn in 3D perspective, where wandering monsters may ambush you.
-- **Rooms** holding monsters, gold, equipment, magic items and floor maps (for some adventures these are required to descend a floor).
+- **Rooms** holding monsters, gold, equipment, magic items and floor maps.
 - **Treasure chests** (sometimes trapped) and **vaults** that open with a three-digit combination.
 - **Fountains** whose water may heal, strengthen, curse or poison the drinker.
 - **Living statues** that will identify an unknown magic item for a price — or crush it.
 - **General stores** on the surface and on selected floors.
 
-The game is written in 1,600 lines, so many things are simplified. Graphics are drawn with simple shapes and sound effects are simple tones; the map, combat arena and screens are laid out for a 320×320 display. 
-Adventures are loaded from plain text files, so you can write your own. The original game supported a high degree of customisation and an advanced adventure editor, which was not possible in this simplified version.
+---
 
 ## 2. Playing the game
 
@@ -51,7 +51,7 @@ Run `PARTY.BAS`.
 | Rogue | all | light | much less likely to set off chest traps (Heroes share this) |
 | Hero | all | all | does everything, but only allowed in a one-player party |
 
-Exactly what each class may use is decided by the adventure ADV module, so other modules can change this. For example, in some role playing games Wizards cannot use swords whereas Gandalf wielded the elven sword Glamdring. So in *Moria* the Wizard class can use swords.
+Exactly what each class may use is decided by the adventure module, so other modules can change this. For example, in the Moria adventure wizards can wield swords.
 
 The same `PARTY.DAT` can be reused for as many games as you like. Party members always start a new quest at level 1.
 
@@ -65,7 +65,7 @@ Run `TOD.BAS`. On the title screen:
 
 ![Module introduction](screens/2_intro.png)
 
-You begin at the **general store**. Press a player number (1–4) to choose a buyer, then a letter to buy an item. Once a buyer is chosen, the list is colour-coded for that player: yellow for items they can use, grey for ones their class cannot (and ammunition for a weapon they may not carry), with a `*` after the name of anything they already have (ammunition only if a matching weapon has some loaded; rations are shared by the party and never marked). Weapons, armor, ammunition, rations and healing are all for sale. A player carries two weapons at most: if both hands are full, the game lists them ("1 Sword   2 Short Bow (20)") and asks which to replace, and **ESC** keeps both (your gold is not spent). **ESC** leaves the store and you descend into the dungeon.
+You begin at the **general store**. Press a player number (1–4) to choose a buyer, then a letter to buy an item. Long lists run to several pages: **<** and **>** turn the page, and the letters start again at A on each one. **ESC** deselects the buyer, and a second **ESC** leaves the store. Once a buyer is chosen, the list is colour-coded for that player: yellow for items they can use, grey for ones their class cannot (and ammunition for a weapon they may not carry), with a `*` after the name of anything they already have (a key line below the list explains this) (ammunition only if a matching weapon has some loaded; rations are shared by the party and never marked). Weapons, armor, ammunition, rations and healing are all for sale. A player carries two weapons at most: if both hands are full, the game lists them ("1 Sword   2 Short Bow (20)") and asks which to replace, and **ESC** keeps both — in the store your gold is not spent. **ESC** leaves the store and you descend into the dungeon.
 
 ### 2.3 Moving around
 
@@ -85,7 +85,7 @@ There are two views.
 | `>` or `.` | go down stairs (in the stairs-down room) |
 | `<` or `,` | go up stairs (in the stairs-up room) |
 | `M` | show the floor map |
-| `1` | player report (use UP/DOWN to page through players) |
+| `1` | player report (UP/DOWN pages through players, **M** shows what their identified magic items do) |
 | `2` | party report (gold, rations, steps, quest items) |
 | `U` | use a magic item |
 | `T` | trade or drop a magic item |
@@ -118,7 +118,7 @@ Players act in order; the current player's name is highlighted in the side panel
 | Key | Action |
 |---|---|
 | Arrow | step, or attack a monster in that direction |
-| `F` | fire a ranged weapon — aim with the arrow keys, **SPACE** fires |
+| `F` | fire a ranged weapon — aim with the arrow keys, **SPACE** fires; the shot flies across the arena to its target |
 | `W` | switch between your two weapons (uses an action) |
 | `N` | negotiate — the monsters name a price; **Y** pays, **N** haggles (halves the price but risks them attacking), **R** refuses |
 | `U` | use a magic item |
@@ -210,7 +210,7 @@ ITEM,kind,name,v1,v2,cost,classes,unknown-name
 | Kind | Item | v1 | v2 |
 |---|---|---|---|
 | `W` | hand weapon | damage | — |
-| `R` | ranged weapon | damage | ammo group number |
+| `R` | ranged weapon | damage | ammo group number, or 0 for a weapon needing no ammunition (a sling) |
 | `X` | ammunition | count per purchase | ammo group (must match its weapon) |
 | `A` | armor | protection | — |
 | `S` | shield | protection | — |
@@ -220,7 +220,7 @@ ITEM,kind,name,v1,v2,cost,classes,unknown-name
 
 Magic effects: `1` heal wounds (power = amount) · `2` cursed, harms the user · `3` fireball, damages every monster · `4` bolt, damages one chosen monster · `5` reveal this floor's map · `6` raise maximum HP · `7` raise bonus.
 
-Up to 48 items. The store shows the first 17 items that have a cost.
+Up to 48 items. The store sells every item that has a cost (up to 40), twelve to a page.
 
 ### 3.5 Starting kit
 
@@ -296,129 +296,3 @@ Hand-drawn floors keep exactly the features you draw. Monsters, gold, items, the
 10 floors · 14×10 grid · 48 items · 24 monsters · 7 monsters per group · 8 quest objects · 24 kit lines · 5 intro lines · 9 modules listed on the menu.
 
 ---
-
-### 3.10 Editor roadmap
-
-The editor is deliberately simple. Possible future features, roughly in order of usefulness:
-
-1. **Graphical map editor** — move a cursor over the grid and place rooms, stairs and links, instead of typing map rows.
-2. **Randomisers** — generate a monster, item, quest name or a whole floor map at random, with stats scaled to the floor.
-3. **New-adventure wizard** — answer a few questions (floors, difficulty, theme) and get a complete, balanced module.
-4. **Pick lists** — choose item kinds, classes and colours from menus rather than typing codes, with a colour preview for monsters.
-5. **Balance report** — per floor: monsters available, average monster strength, gold and items on offer.
-6. **Play-test button** — save and run `TOD.BAS` on the module directly.
-7. **Search and bulk edit** — find a name across the file, or scale all monster hit points by a percentage.
-8. **Undo** for the last change, and automatic backup (`.BAK`) on save.
-9. **Larger files** — stream very long modules instead of holding every line in memory.
-
-## 4. Developer's guide
-
-### 4.1 Overview
-
-`TOD.BAS` is a single program using `OPTION EXPLICIT` and `OPTION DEFAULT INTEGER` (the map packing relies on 64-bit integers). Arrays are indexed from 0 (the MMBasic default). The main loop is simply:
-
-```
-DO
-  TitleScr      ' new game or load
-  PlayGame      ' runs until over<>0, then shows EndScr
-LOOP
-```
-
-### 4.2 Code map
-
-The source is split into commented sections, in this order:
-
-| Section | Main routines |
-|---|---|
-| Declarations | constants, module tables, party arrays, game state, combat state |
-| Graphics wrappers | `Clr` `Tx` `TxA` `Bx` `Bo` `Ln` `Ci` `Tr` `GetK` |
-| Text helpers | `FS$` `NF` `Rest$` (CSV fields), `Msg` / `DrawLog` (5-line message log), `Prompt`, `TopBar`, `RL` (report line), `WrapTx` |
-| Cell access | `CG` (get bits), `CS` (set bits), `KDir` |
-| Module & party loading | `LoadModule`, `LoadParty`, `ApplyKits`, `FindItem` |
-| Dungeon generation | `BuildDungeon` → per floor `GenFloor` (or `ParseMap` for drawn floors), `Carve`, `Link`, `Populate`, `PlaceSpecial`; `PickMon`, `MonCount`, `PickItem` |
-| Items & party | `GiveItem`, `PickMI`, `UseMagic`, `IName$`, `Info$`, `Alive`, `PartyAlive`, `AllFound`, `Wound`, `Prot`, `AskP`, `GainXP`, `SwapP` |
-| Drawing | `DrawFig`, `DrawMon`, `DrawHall` (perspective corridor, with `ExitKind`, `SideDoor` and `FrontDoor` for doors into rooms), `DrawArena`, `Panel`, `DrawRoomScr`, `Redraw`, `ShowMapScr` |
-| Reports | `PlayerRpt`, `PartyRpt`, `MonRpt`, `HelpScr`, `Ind$`, `WName$`, `Store` |
-| Exploration | `PlayGame` (key loop), `Walk`, `MoveTo`, `TakeStep`, `TimeStep`, `Stairs`, `Listen`, `Trade`, `Formation` |
-| Rooms | `RoomEvents`, `Treasure`, `Reveal`, `Vault`, `Fountain`, `Statue` |
-| Combat | `SetupFight` (places monsters and party as the room is entered, before it is drawn), `Placed`, `Combat`, `DrawCombat`, `PTurn`, `Attack`, `DmgMon`, `Target`, `MTurn`, `MAttack`, `Negot`, `Occ`, `PlaceMon`, `SetSlots`, `PHit`, `MHit` |
-| Save / load | `AddN`, `SaveGame`, `LoadGame` |
-| Title & end | `TitleScr`, `NewGame`, `EndScr` |
-
-### 4.3 The map cell
-
-Each floor is `cell(floor, x, y)`, one 64-bit integer per grid cell with all its data packed into bit fields. `LoadModule` sizes the array to exactly the module's `FLOORS` and `GRID` (`ERASE cell` then `DIM cell(nfl,gw-1,gh-1)`), so loop over `gw-1`/`gh-1`, never fixed sizes. Always use `CG(x,y,shift,bits)` and `CS x,y,shift,bits,value`; both act on the current floor `fl`.
-
-| Constant | Bit | Width | Holds |
-|---|---|---|---|
-| `BMK` | 0 | 4 | exits: bit 0 N, 1 E, 2 S, 3 W |
-| `BTY` | 4 | 2 | 0 rock, 1 hallway, 2 room |
-| `BFE` | 6 | 4 | feature: 1 chest, 2 vault, 3 fountain, 4 statue, 6 down, 7 up, 8 store |
-| `BMO` | 10 | 5 | monster type (0 = none) |
-| `BMC` | 15 | 3 | monster count (max 7) |
-| `BSE` | 18 | 1 | seen by the party |
-| `BQS` | 19 | 4 | quest object number |
-| `BIM` | 23 | 8 | item number |
-| `BGD` | 31 | 10 | gold ÷ 10 |
-| `BMP` | 41 | 1 | this floor's map is here |
-
-Directions are 0=N, 1=E, 2=S, 3=W with offsets in `DX()`/`DY()`. `Link x,y,d` opens a two-way exit between neighbouring cells. Stair positions are kept in `upx()/upy()/dnx()/dny()` per floor.
-
-Hand-drawn `MAP` rows are not kept in memory. `LoadModule` only counts them per floor (`fmn()`); `ParseMap` reads them back from the module file while that floor is being built, so the `.ADV` file must stay on the card (it is needed anyway to continue a saved game).
-
-**Memory**: MMBasic allocates variable memory in 256-byte pages, so every array or string costs at least 256 bytes. With *Quest of the King* loaded the game uses about 28 KB of variable memory (25 KB for *Pennies and Prizes*). Merging the many small arrays into a few tables would save a further 6–8 KB if it is ever needed.
-
-### 4.4 Game state
-
-- **Position**: `fl`, `px`, `py`, `pd` (facing), `inrm` (1 = room view), `ent` (side entered from).
-- **Progress**: `steps`, `gold`, `rat` (rations), `dif`, `mapf()` (maps found), `qs()` (0 hidden, 1 found, 2 destroyed), `qt()` (countdowns), `ident()` (magic items identified).
-- **Party** (index 1–`np`): `pn$ pcl pco php pwd pxp plv pbn pcw par psh phl`, weapons `pw(i,0..1)` with ammo `pam(i,0..1)`, magic items `pmi(i,0..9)`.
-- **Ending**: `over` = 0 playing, 1 party dead, 2 quest failed, 3 abandoned, 4 won (`won`=1).
-- **Combat**: monster type `cmt`, count `nmc`, positions `cmx/cmy`, hit points `chp`; player positions `cpx/cpy`.
-
-### 4.5 Screen layout (320×320, FONT 1 = 8×12)
-
-| Area | Position |
-|---|---|
-| Top bar | y 0–17 |
-| Arena / hallway | 9×9 tiles of 24 px from (10, 24) |
-| Side panel | x 236–319, 55 px per player |
-| Prompt | y 245–256 |
-| Message log | 5 lines, y 258–319, 40 characters each |
-
-**Partial redraws.** The game keeps track of what is on screen (`scrv`: room, combat or hallway, plus which room and a signature from `ScrSig`). `Clr` marks the screen unknown, so any full-screen report or menu forces a complete redraw afterwards. Otherwise:
-
-- `Redraw` (called after every key while exploring) repaints the room or hallway only if something it shows has changed; bumping a wall or pressing an unused key redraws nothing.
-- In combat, `CombatView` draws everything only when needed. After that, a move repaints just the two tiles involved (`DrawTile`, which draws the floor, any room object from `DrawObj`, then whoever stands there). A killed monster or disabled player repaints one tile, and the aiming cursor repaints one tile per step. The side panel (`PanelIf`/`PanSig`) and top bar are repainted only when their contents change, and the log is drawn by `Msg`.
-
-A typical combat keypress now paints about 7,000 pixels instead of clearing and repainting the whole 320×320 screen. The test harness checks this by redrawing each view in full at every keypress and comparing the two images pixel by pixel.
-
-All drawing goes through the eight wrappers, so moving to another display size or font means changing the wrappers and the layout constants `TS`, `OX`, `OY`, `PANX` (and checking text widths).
-
-### 4.6 Sound
-
-All sound uses PicoMite's `PLAY TONE left,right,ms`, with the same frequency on both channels. Each program has two routines:
-
-- `SndT freq,ms` starts a tone and then `PAUSE`s for its length, because a new `PLAY TONE` replaces one that is still playing. A frequency of 0 is a rest.
-- `SndSeq notes$` plays a list such as `"523/100,0/50,880/40"` (frequency in Hz `/` duration in ms).
-
-In `TOD.BAS`, game code only calls `Sfx "name"` (e.g. `Sfx "gold"`); all the effects' notes are in the one `SELECT CASE` inside `Sfx`, so sounds can be retuned in one place. The title screen plays the opening of the Swan theme from Tchaikovsky's *Swan Lake* (public domain) from `TitleTune`, which checks the keyboard while each note sounds; pressing **N**, **C** or **Q** stops it at once (`PLAY STOP`) and acts as that choice. Change its tempo with `CONST TBEAT` (milliseconds per quarter note). Sound is always on. `PLAY STOP` is called at the end-of-game screen and before `PARTY.BAS` runs the game. Effects play while the game waits, so keep new ones short.
-
-### 4.7 File formats
-
-**PARTY.DAT** (written by `PARTY.BAS`):
-```
-TODPARTY1
-<number of players>
-name,class,colour,hp,bonus      (one line per player; class 1-4, colour 1-4)
-```
-
-**TODSAVE.DAT** — comma-separated lines, each ending in a trailing comma:
-1. `TODSAVE1,<module file>`
-2. `fl,px,py,pd,inrm,ent,steps,gold,rat,dif,np`
-3. one line per player: name, 11 stats, two weapon/ammo pairs, 10 magic items
-4. `qt,qs` pairs for all 8 quest slots
-5. `ident` flags for all 48 items
-6. for each floor: `mapf,upx,upy,dnx,dny`, then one line per grid row holding the packed cell values
-
-On loading, the module is read first (for item and monster tables), then the saved state overwrites everything else. If you add a new piece of game state, add it to both `SaveGame` and `LoadGame` and change the `TODSAVE1` header so old saves are refused.
