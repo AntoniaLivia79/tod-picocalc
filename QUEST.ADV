@@ -3,6 +3,11 @@
 # Lines are KEYWORD,field,field,...   Lines starting # are ignored.
 # ================================================================
 TITLE,Quest of the King
+
+# CLASSES,fighter,wizard,rogue,hero  names the four class slots
+# (up to 8 letters each). Optional: these are the standard names.
+# Item class letters F W R H always refer to the slots in this order.
+CLASSES,Fighter,Wizard,Rogue,Hero
 INTRO,The King is held captive by monsters in the dungeon beneath a ruined castle.
 INTRO,Rescue him and recover his rainbow orb of power before they are destroyed. Then return to the surface.
 INTRO,Beware - your time is limited!
@@ -20,7 +25,7 @@ WANDER,6
 # 1 = a floor's map must be found before descending
 NEEDMAP,1
 # floors that get a general store room
-STORE,3,8
+STORE,3,0
 # SEED,0 = new random dungeon each game, other = same dungeon every game
 SEED,0
 

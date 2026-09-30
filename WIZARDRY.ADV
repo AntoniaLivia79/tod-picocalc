@@ -8,6 +8,11 @@
 
 TITLE,Wizardry
 
+# Class names from the original game, in slot order: fighter,
+# wizard, rogue and hero. The Lord, a holy warrior, takes the hero
+# slot. Item class letters F W R H still refer to these slots.
+CLASSES,Fighter,Mage,Thief,Lord
+
 INTRO,Proving Grounds of the Mad Overlord.
 INTRO,The overlord Trebor is a proud man and a foolish one. A wizard
 INTRO,named Werdna has stolen the amulet that guards the realm and has

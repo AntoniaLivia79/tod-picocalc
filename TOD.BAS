@@ -45,6 +45,8 @@ DIM np, pcl(4), pco(4), php(4), pwd(4), pxp(4), plv(4), pbn(4), pcw(4), par(4), 
 DIM pw(4,1), pam(4,1), pmi(4,9), co(4)
 DIM pn$(4) LENGTH 12
 DIM cln$(4) LENGTH 8
+DIM coln$(4) LENGTH 8
+DIM pused(4)
 ' ---------- game state ----------
 DIM fl, px, py, pd, inrm, ent, steps, gold, rat, dif, over, won, ry
 DIM mapf(MAXF), upx(MAXF), upy(MAXF), dnx(MAXF), dny(MAXF)
@@ -60,6 +62,7 @@ DIM scrv, vf, vx, vy, vd, vsig, pnsig, tbn
 ' fset=1 once the monsters of the room at fsf/fsx/fsy have been given
 ' their starting positions, so the room view can show them there.
 DIM fset, fsf, fsx, fsy
+DIM hfdone                ' drank at this hallway fountain already
 ' player figures: packed rectangles, one list per class
 DIM fig(4,48), fgn(4)
 
@@ -67,6 +70,7 @@ DX(1)=1: DX(3)=-1: DY(0)=-1: DY(2)=1
 ins(1)=46: ins(2)=82: ins(3)=106: ins(4)=121: ins(5)=130
 co(1)=&H2040FF: co(2)=&HE000E0: co(3)=&H00B000: co(4)=&HE00000
 cln$(1)="Fighter": cln$(2)="Wizard": cln$(3)="Rogue": cln$(4)="Hero"
+coln$(1)="Blue": coln$(2)="Magenta": coln$(3)="Green": coln$(4)="Red"
 FONT 1
 RANDOMIZE TIMER
 FigInit
@@ -234,7 +238,8 @@ END FUNCTION
 
 '===================== module loading ===============================
 SUB LoadModule f$
-  LOCAL a$, k$, n, i
+  LOCAL a$, k$, n, i, t$
+  cln$(1)="Fighter": cln$(2)="Wizard": cln$(3)="Rogue": cln$(4)="Hero"
   nitm=0: nmon=0: nq=0: nintro=0: nkit=0: nfl=3: gw=12: gh=9: nrm=14
   wander=5: needmap=1: st1=4: st2=8: seed=0: sgold(1)=150: sgold(2)=120: sgold(3)=100
   ttl$="Adventure": win$="Victory!": fail$="Your quest has failed."
@@ -247,6 +252,11 @@ SUB LoadModule f$
     k$=UCASE$(FS$(a$,1))
     SELECT CASE k$
       CASE "TITLE": ttl$=Rest$(a$)
+      CASE "CLASSES"
+        FOR i=1 TO 4
+          t$=FS$(a$,i+1)
+          IF t$<>"" THEN cln$(i)=LEFT$(t$,8)
+        NEXT
       CASE "INTRO": IF nintro<5 THEN intro$(nintro)=LEFT$(Rest$(a$),160): nintro=nintro+1
       CASE "WIN": win$=Rest$(a$)
       CASE "FAIL": fail$=Rest$(a$)
@@ -461,6 +471,9 @@ SUB Populate f
         IF RND<.5 OR fe=FCH OR fe=FVA THEN CS x,y,BGD,10,MIN(1023,(5+INT(RND*(10+f*8)))*(1+(fe=FVA)))
         IF nitm>0 AND (RND<.3 OR fe=FCH OR fe=FVA) THEN CS x,y,BIM,8,PickItem()
       ENDIF
+    ELSEIF CG(x,y,BTY,2)=1 AND fmn(f)=0 THEN
+      ' the odd fountain out in the hallways, as in the original game
+      IF RND*100<4 THEN CS x,y,BFE,4,FFO
     ENDIF
   NEXT: NEXT
 END SUB
@@ -772,8 +785,32 @@ SUB FrontDoor L,T,R,B
   ENDIF
   Ci x0+dw*4\5,y0+dh*11\20,MAX(1,dw\16),YEL,YEL
 END SUB
+' A fountain standing in the hallway, k cells ahead (0 = here),
+' scaled to that distance: stone basin, pedestal, bowl and a jet.
+SUB HallFount k
+  LOCAL L0, R0, B0, L1, R1, B1, cx, yb, fw, bh, pdw, ph, jh, jt, bt, sc, wc, jc
+  L0=10+ins(k): R0=309-ins(k): B0=241-ins(k)*11\15
+  L1=10+ins(k+1): R1=309-ins(k+1): B1=241-ins(k+1)*11\15
+  cx=160: yb=(B0*2+B1)\3
+  fw=((R0-L0)+(R1-L1))*3\20: bh=MAX(3,fw\5)
+  pdw=MAX(2,fw\8): ph=MAX(2,fw\7): jh=MAX(3,fw\5)
+  sc=&HA8A8A8: wc=&H40A0FF: jc=&HA0E0FF
+  ' basin with water, pedestal, small bowl on top
+  Bx cx-fw\2,yb-bh,fw,bh,&H606060,sc
+  Bx cx-fw\2+2,yb-bh+1,fw-4,MAX(1,bh\3),wc,wc
+  Bx cx-pdw\2,yb-bh-ph,pdw,ph,&H606060,sc
+  bt=yb-bh-ph-MAX(2,bh\2)
+  Bx cx-fw\4,bt,MAX(3,fw\2),MAX(2,bh\2),&H606060,sc
+  ' the jet rises, then falls back either side into the basin
+  jt=bt-jh
+  Ln cx,bt,cx,jt,jc
+  Ln cx,jt,cx-fw\5,jt+jh\2,jc: Ln cx-fw\5,jt+jh\2,cx-fw\3,yb-bh,jc
+  Ln cx,jt,cx+fw\5,jt+jh\2,jc: Ln cx+fw\5,jt+jh\2,cx+fw\3,yb-bh,jc
+  Ci cx-fw\3,yb-bh-2,1,wc,wc: Ci cx+fw\3,yb-bh-2,1,wc,wc
+END SUB
 SUB DrawHall
-  LOCAL k, x, y, nx, ny, d, l, r, m, L0, R0, T0, B0, L1, R1, T1, B1, dw, dh
+  LOCAL k, x, y, nx, ny, d, l, r, m, L0, R0, T0, B0, L1, R1, T1, B1, dw, dh, nfo, i
+  LOCAL fok(5)
   Clr GRN
   Bx 10,22,300,110,&H40E0F0,&H40E0F0
   Bx 10,132,300,110,WHT,WHT
@@ -782,6 +819,7 @@ SUB DrawHall
     L0=10+ins(k): R0=309-ins(k): T0=22+ins(k)*11\15: B0=241-ins(k)*11\15
     L1=10+ins(k+1): R1=309-ins(k+1): T1=22+ins(k+1)*11\15: B1=241-ins(k+1)*11\15
     m=CG(x,y,BMK,4)
+    IF CG(x,y,BFE,4)=FFO THEN nfo=nfo+1: fok(nfo)=k
     ' side walls: an exit into a hallway is an opening, an exit into
     ' a room is a door set in the wall, drawn in perspective
     IF ExitKind(x,y,l)=1 THEN
@@ -808,6 +846,8 @@ SUB DrawHall
     x=nx: y=ny
     IF k=4 THEN Bx L1,T1,R1-L1+1,B1-T1+1,0,0
   NEXT
+  ' fountains last, farthest first, so nearer ones stand in front
+  FOR i=nfo TO 1 STEP -1: HallFount fok(i): NEXT
   TopBar "FLOOR "+STR$(fl)+"  FACING "+MID$("NORTHEAST SOUTHWEST",pd*5+1,5)+"  GOLD "+STR$(gold),0,GRN
   DrawLog
   MarkView 3
@@ -1000,6 +1040,9 @@ SUB ShowMapScr
         IF fe=FUP THEN Bx sx-2,sy-2,6,6,c,WHT
         IF fe=FDN THEN Bx sx-2,sy-2,6,6,c,c
         IF fe=FSH THEN Bx sx-2,sy-2,6,6,c,YEL
+        IF fe=FFO THEN Bx sx-2,sy-2,6,6,c,&H40A0FF
+      ELSEIF CG(x,y,BFE,4)=FFO THEN
+        Ci sx,sy,3,&H2060E0,&H40A0FF
       ENDIF
     ENDIF
   NEXT: NEXT
@@ -1168,6 +1211,7 @@ SUB HelpScr
   RL "U use magic item   T trade item",WHT
   RL "O change formation L listen at door",WHT
   RL "K save game (hallway only)",WHT
+  RL "D drink at a hallway fountain",WHT
   RL "Q quit quest",WHT
   ry=ry+8: RL "COMBAT",YEL
   RL "Arrow: step, or attack adjacent foe",WHT
@@ -1309,6 +1353,17 @@ SUB PlayGame
       CASE 84: Trade
       CASE 79: Formation
       CASE 76: Listen
+      CASE 68
+        IF inrm=0 AND CG(px,py,BFE,4)=FFO THEN
+          IF hfdone THEN
+            Msg "The party has drunk here already."
+          ELSE
+            Fountain
+            hfdone=1
+          ENDIF
+        ELSE
+          Msg "There is no fountain here."
+        ENDIF
       CASE 75
         ' saving in a room would lose the monsters standing in it,
         ' so it is only allowed out in the hallways
@@ -1345,12 +1400,13 @@ END SUB
 
 SUB MoveTo d
   px=px+DX(d): py=py+DY(d)
-  CS px,py,BSE,1,1
+  CS px,py,BSE,1,1: hfdone=0
   IF CG(px,py,BTY,2)=2 THEN
     inrm=1: ent=(d+2) MOD 4: TakeStep 0
     IF over=0 THEN RoomEvents
   ELSE
     inrm=0: TakeStep 1
+    IF over=0 AND CG(px,py,BFE,4)=FFO THEN Msg "There is a fountain here.  D = drink"
   ENDIF
 END SUB
 
@@ -1551,7 +1607,7 @@ END FUNCTION
 SUB Fountain
   LOCAL p, r, used(4)
   DO
-    DrawRoomScr
+    IF inrm THEN DrawRoomScr ELSE DrawHall
     p=AskP("Who drinks from the fountain?",0)
     IF p=0 THEN EXIT SUB
     IF used(p) THEN
@@ -2024,6 +2080,132 @@ SUB TitleScr
   LOOP
 END SUB
 
+'===================== party creation ==============================
+' Merged from the old PARTY.BAS so that the class names can come from
+' the adventure module (CLASSES line). The party is still kept in
+' PARTY.DAT so it can be reused for the next quest.
+' Returns 1 when a party is ready to set out.
+FUNCTION PartyMenu()
+  LOCAL k
+  DO
+    IF LoadParty()=0 THEN
+      IF PcCreate()=0 THEN EXIT FUNCTION
+    ELSE
+      PcShow "YOUR PARTY"
+      RL "ENTER  set out with this party",CYN
+      RL "N      create a new party",CYN
+      RL "ESC    back",CYN
+      k=GetK()
+      IF k=13 THEN PartyMenu=1: EXIT FUNCTION
+      IF k=KESC THEN EXIT FUNCTION
+      IF k=78 THEN k=PcCreate()
+    ENDIF
+  LOOP
+END FUNCTION
+' Build a new party and save it to PARTY.DAT. Returns 0 if abandoned.
+FUNCTION PcCreate()
+  LOCAL i, k
+  DO
+    Clr 0: TopBar "CREATE YOUR PARTY",0,YEL: ry=30
+    RL LEFT$(cln$(1)+SPACE$(9),9)+"most hit points, best armed",WHT
+    RL LEFT$(cln$(2)+SPACE$(9),9)+"reads magic scrolls",WHT
+    RL LEFT$(cln$(3)+SPACE$(9),9)+"light armor, avoids traps",WHT
+    RL LEFT$(cln$(4)+SPACE$(9),9)+"best of all, but goes alone",WHT
+    ry=ry+10
+    RL "Number of players? 1-4  (ESC=back)",CYN
+    DO
+      k=GetK()
+    LOOP UNTIL (k>=49 AND k<=52) OR k=KESC
+    IF k=KESC THEN EXIT FUNCTION
+    np=k-48
+    FOR i=1 TO 4: pused(i)=0: NEXT
+    FOR i=1 TO np: PcMake i: NEXT
+    DO
+      PcShow "YOUR NEW PARTY"
+      RL "R      re-roll hit points and bonus",CYN
+      RL "ENTER  keep this party",CYN
+      RL "ESC    start over",CYN
+      k=GetK()
+      IF k=82 THEN
+        FOR i=1 TO np: PcRoll i: NEXT
+      ENDIF
+    LOOP UNTIL k=13 OR k=KESC
+    IF k=13 THEN PcSave: PcCreate=1: EXIT FUNCTION
+  LOOP
+END FUNCTION
+SUB PcMake n
+  LOCAL k, mx, c
+  Clr 0: TopBar "PLAYER "+STR$(n)+" OF "+STR$(np),0,YEL: ry=30
+  RL "Name?",CYN
+  pn$(n)=PcName$(8,ry,10)
+  ry=ry+20
+  IF np=1 THEN mx=4 ELSE mx=3
+  RL "Class:",CYN
+  FOR c=1 TO mx: RL "  "+STR$(c)+"  "+cln$(c),WHT: NEXT
+  DO
+    k=GetK()-48
+  LOOP UNTIL k>=1 AND k<=mx
+  pcl(n)=k
+  ry=ry+6: RL "Colour:",CYN
+  FOR c=1 TO 4
+    IF pused(c)=0 THEN RL "  "+STR$(c)+"  "+coln$(c),co(c)
+  NEXT
+  DO
+    k=GetK()-48
+    IF k>=1 AND k<=4 THEN
+      IF pused(k)=0 THEN EXIT DO
+    ENDIF
+  LOOP
+  pused(k)=1: pco(n)=k
+  PcRoll n
+END SUB
+' Roll hit points and bonus for the class in slot pcl(n).
+SUB PcRoll n
+  SndSeq "800/15,500/15,900/15,600/25"
+  SELECT CASE pcl(n)
+    CASE 1: php(n)=10+1+INT(RND*6): pbn(n)=2
+    CASE 2: php(n)=6+1+INT(RND*4): pbn(n)=0
+    CASE 3: php(n)=8+1+INT(RND*6): pbn(n)=1
+    CASE 4: php(n)=12+1+INT(RND*6): pbn(n)=2
+  END SELECT
+  pbn(n)=pbn(n)+INT(RND*2)
+END SUB
+SUB PcShow t$
+  LOCAL n, y
+  Clr 0: TopBar t$,0,YEL: ry=30
+  FOR n=1 TO np
+    y=ry
+    DrawCls 10,y,pcl(n),co(pco(n))
+    TxL 44,y,STR$(n)+". "+pn$(n),co(pco(n)),0
+    TxL 44,y+13,cln$(pcl(n))+"  HP "+STR$(php(n))+"  Bonus "+STR$(pbn(n)),WHT,0
+    ry=ry+36
+  NEXT
+  ry=ry+10
+END SUB
+' Type a name: letters, digits and spaces, no commas.
+FUNCTION PcName$(x,y,mx)
+  LOCAL s$, k
+  DO
+    TxL x,y,s$+"_ ",WHT,0
+    k=GetK()
+    SndT 1200,6
+    IF k=13 AND s$<>"" THEN EXIT DO
+    IF k=8 AND LEN(s$)>0 THEN s$=LEFT$(s$,LEN(s$)-1)
+    IF k>=32 AND k<=90 AND k<>44 AND LEN(s$)<mx THEN s$=s$+CHR$(k)
+  LOOP
+  PcName$=s$
+END FUNCTION
+SUB PcSave
+  LOCAL i
+  OPEN "PARTY.DAT" FOR OUTPUT AS #1
+  PRINT #1,"TODPARTY1"
+  PRINT #1,STR$(np)
+  FOR i=1 TO np
+    PRINT #1,pn$(i)+","+STR$(pcl(i))+","+STR$(pco(i))+","+STR$(php(i))+","+STR$(pbn(i))
+  NEXT
+  CLOSE #1
+  Sfx "save"
+END SUB
 FUNCTION NewGame()
   LOCAL f$, n, k, i, j
   Clr 0: TopBar "SELECT ADVENTURE MODULE",0,YEL
@@ -2032,12 +2214,11 @@ FUNCTION NewGame()
     n=n+1: fls$(n)=f$: RL STR$(n)+"  "+f$,WHT: f$=DIR$()
   LOOP
   IF n=0 THEN RL "No .ADV module files found!",&HFF4040: k=GetK(): EXIT FUNCTION
-  IF LoadParty()=0 THEN RL "No PARTY.DAT - run PARTY.BAS first!",&HFF4040: k=GetK(): EXIT FUNCTION
   Prompt "Choose module 1-"+STR$(n)+" (ESC=back)"
   k=GetK()-48
   IF k<1 OR k>n THEN EXIT FUNCTION
   LoadModule fls$(k)
-  i=LoadParty()
+  IF PartyMenu()=0 THEN EXIT FUNCTION
   Clr 0: TopBar UCASE$(ttl$),0,YEL
   ry=30
   FOR i=0 TO nintro-1: WrapTx intro$(i),WHT: NEXT

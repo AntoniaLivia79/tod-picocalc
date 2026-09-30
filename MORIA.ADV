@@ -8,6 +8,11 @@
 
 TITLE,Mines of Moria
 
+# Class names for this adventure, in slot order: the fighter,
+# wizard, rogue and hero slots. Item class letters F W R H still
+# refer to these slots (F=Ranger, W=Wizard, R=Hobbit, H=Elf).
+CLASSES,Ranger,Wizard,Hobbit,Elf
+
 INTRO,The East Gate stands open and the dark of Khazad-dum waits
 INTRO,beyond it. Six levels below lie the helm and the axe of
 INTRO,Durin, buried with his house when the mines were lost.
